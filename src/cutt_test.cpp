@@ -100,13 +100,14 @@ int main(int argc, char *argv[]) {
   tester = new TensorTester();
   tester->setTensorCheckPattern((unsigned int *)dataIn, dataSize*2);
 
-  if (!test1()) goto fail;
-  if (!test2()) goto fail;
-  if (!test3()) goto fail;
-  if (!test4()) goto fail;
-  if (!test5()) goto fail;
+  bool passed = true;
+  if(passed){passed = test1(); if(!passed) printf("Test 1 failed\n");}
+  if(passed){passed = test2(); if(!passed) printf("Test 2 failed\n");}
+  if(passed){passed = test3(); if(!passed) printf("Test 3 failed\n");}
+  if(passed){passed = test4(); if(!passed) printf("Test 4 failed\n");}
+  if(passed){passed = test5(); if(!passed) printf("Test 5 failed\n");}
 
-  {
+  if(passed){
     std::vector<int> worstDim;
     std::vector<int> worstPermutation;
     double worstBW = timerDouble->getWorst(worstDim, worstPermutation);
@@ -115,13 +116,9 @@ int main(int argc, char *argv[]) {
     printVec(worstDim);
     printf("permutation\n");
     printVec(worstPermutation);
+    printf("test OK\n");
   }
 
-  printf("test OK\n");
-  goto end;
-fail:
-  printf("test FAIL\n");
-end:
   deallocate_device<long long int>(&dataIn);
   deallocate_device<long long int>(&dataOut);
   delete tester;
@@ -267,9 +264,9 @@ bool test3() {
     int rank = 3;
     std::vector<int> dim(rank);
     std::vector<int> permutation(rank);
-    dim[0] = 1305;
-    dim[1] = 599;
-    dim[2] = 88;
+    dim[0] = 651;
+    dim[1] = 299;
+    dim[2] = 44;
     permutation[0] = 0;
     permutation[1] = 2;
     permutation[2] = 1;
@@ -282,9 +279,9 @@ bool test3() {
     std::vector<int> dim(rank);
     std::vector<int> permutation(rank);
     dim[0] = 24;
-    dim[1] = 330;
-    dim[2] = 64;
-    dim[3] = 147;
+    dim[1] = 170;
+    dim[2] = 32;
+    dim[3] = 97;
     permutation[0] = 1;
     permutation[1] = 0;
     permutation[2] = 2;
@@ -333,10 +330,10 @@ bool test3() {
     std::vector<int> dim(5);
     std::vector<int> permutation(5);
     dim[0] = 5;
-    dim[1] = 42;
-    dim[2] = 75;
-    dim[3] = 86;
-    dim[4] = 57;
+    dim[1] = 32;
+    dim[2] = 45;
+    dim[3] = 63;
+    dim[4] = 37;
     permutation[0] = 2 - 1;
     permutation[1] = 4 - 1;
     permutation[2] = 5 - 1;
@@ -442,18 +439,18 @@ bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
     vol *= dim[r];
   }
 
+  printf("Number of elements %d\n",vol);
+  printf("Dimensions\n");
+  printVec(dim);
+  printf("Permutation\n");
+  printVec(permutation);
+
   size_t volmem = vol*sizeof(T);
   size_t datamem = dataSize*sizeof(long long int);
   if (volmem > datamem) {
-    printf("test_tensor, data size exceeded\n");
+    printf("#ERROR(test_tensor): Data size exceeded: %llu %llu\n",volmem,datamem);
     return false;
   }
-
-  printf("number of elements %d\n", vol);
-  printf("dimensions\n");
-  printVec(dim);
-  printf("permutation\n");
-  printVec(permutation);
 
   cuttTimer* timer;
   if (sizeof(T) == 4) {
