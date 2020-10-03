@@ -205,7 +205,7 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, int* dim, int* permutation, si
 }
 
 cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
-  cudaStream_t stream, void* idata, void* odata) {
+  cudaStream_t stream, void* idata, void* odata, void* alpha, void *beta) {
 
   // Check that input parameters are valid
   cuttResult inpCheck = cuttPlanCheckInput(rank, dim, permutation, sizeofType);
@@ -269,7 +269,7 @@ cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, int* dim, int* permutat
     cudaCheck(cudaDeviceSynchronize());
     timer.start();
     // Execute plan
-    if (!cuttKernel(*it, idata, odata)) return CUTT_INTERNAL_ERROR;
+    if (!cuttKernel(*it, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
     timer.stop();
     double curTime = timer.seconds();
     // it->print();
@@ -336,7 +336,7 @@ cuttResult cuttDestroy(cuttHandle handle) {
   return CUTT_SUCCESS;
 }
 
-cuttResult cuttExecute(cuttHandle handle, void* idata, void* odata) {
+cuttResult cuttExecute(cuttHandle handle, void* idata, void* odata, void* alpha, void* beta) {
   // prevent modification when find
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
@@ -350,7 +350,7 @@ cuttResult cuttExecute(cuttHandle handle, void* idata, void* odata) {
   cudaCheck(cudaGetDevice(&deviceID));
   if (deviceID != plan.deviceID) return CUTT_INVALID_DEVICE;
 
-  if (!cuttKernel(plan, idata, odata)) return CUTT_INTERNAL_ERROR;
+  if (!cuttKernel(plan, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
   return CUTT_SUCCESS;
 }
 
