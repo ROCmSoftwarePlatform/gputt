@@ -448,7 +448,7 @@ bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
   size_t volmem = vol*sizeof(T);
   size_t datamem = dataSize*sizeof(long long int);
   if (volmem > datamem) {
-    printf("#ERROR(test_tensor): Data size exceeded: %llu %llu\n",volmem,datamem);
+    printf("#ERROR(test_tensor): Data size exceeded: %zu %zu\n", volmem, datamem);
     return false;
   }
 
