@@ -109,6 +109,6 @@ target_link_libraries(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME}_python PROPERTIES LIBRARY_OUTPUT_NAME "${PROJECT_NAME}")
 
 install(TARGETS ${PROJECT_NAME} ARCHIVE DESTINATION . LIBRARY DESTINATION .)
-install(FILES cutt.h DESTINATION include)
+install(FILES include/cutt.h DESTINATION include)
 install(TARGETS ${PROJECT_NAME}_python ${PROJECT_NAME}_bench ${PROJECT_NAME}_test DESTINATION .)
 
