@@ -1,10 +1,24 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project(cuTT)
+project(cutt)
+
+if ("x" STREQUAL "x${CMAKE_BUILD_TYPE}")
+set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if (UNIX)
+# Use $ORIGIN or @loader_path, which allow to pick up
+# dependencies relative to the executable folder
+if (APPLE)
+set(CMAKE_INSTALL_RPATH "@loader_path")
+else()
+set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
+endif()
 
 # enable CXX
 enable_language(CXX)
 if (NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 14)
 endif (NOT CMAKE_CXX_STANDARD)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (NOT CMAKE_CXX_EXTENSIONS)
@@ -25,14 +39,21 @@ endif (NOT CMAKE_CUDA_EXTENSIONS)
 message(STATUS "CUDA Include Dirs: " ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 message(STATUS "CUDA Host Compiler: " ${CMAKE_CUDA_HOST_COMPILER})
 
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+if ("x${Python3_VERSION}" STREQUAL "x")
+find_package(Python3 COMPONENTS Interpreter Development)
+else()
+find_package(Python3 ${Python3_VERSION} EXACT COMPONENTS Interpreter Development)
+endif()
+set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
+
+set(PYBIND11_PYTHON_VERSION ${Python3_VERSION})
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/pybind11)
 
 option(ENABLE_NVTOOLS "Enable nvvp profiling of CPU code" OFF)
 option(ENABLE_NO_ALIGNED_ALLOC "Enable aligned_alloc() function implemented in cuTT" OFF)
 option(ENABLE_UMPIRE "Enable umpire for memory management" OFF)
 include(CheckFunctionExists)
-
-
 
 # ENABLE_NVTOOLS
 if(ENABLE_NVTOOLS)
@@ -42,7 +63,6 @@ if(ENABLE_NVTOOLS)
 endif()
 
 message(STATUS "Current CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
-
 
 # ENABLE_NO_ALIGNED_ALLOC
 if(ENABLE_NO_ALIGNED_ALLOC)
@@ -66,26 +86,29 @@ endif ()
 
 file(GLOB CUTT_SOURCE_FILES "src/*.cu" "src/*.cpp" "include/*.h")
 
-add_library(cutt ${CUTT_SOURCE_FILES})
-target_include_directories(cutt PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+add_library(${PROJECT_NAME} STATIC ${CUTT_SOURCE_FILES})
+set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 if(ENABLE_UMPIRE)
-    target_link_libraries(cutt umpire)
-    target_compile_definitions(cutt PUBLIC CUTT_HAS_UMPIRE -DCUTT_USES_THIS_UMPIRE_ALLOCATOR=${CUTT_USES_THIS_UMPIRE_ALLOCATOR})
+    target_link_libraries(${PROJECT_NAME} umpire)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC CUTT_HAS_UMPIRE CUTT_USES_THIS_UMPIRE_ALLOCATOR=${CUTT_USES_THIS_UMPIRE_ALLOCATOR})
 endif()
 
-# install library and include
-install(TARGETS cutt
-        ARCHIVE
-            DESTINATION lib
-        LIBRARY
-            DESTINATION lib
-        )
-install(FILES cutt.h
-        DESTINATION include
-        )
+add_executable(${PROJECT_NAME}_bench "src/bench/bench.cpp")
+target_link_libraries(${PROJECT_NAME}_bench PUBLIC ${PROJECT_NAME})
 
-add_executable(cutt_bench "src/cutt_bench.cpp")
-target_link_libraries(cutt_bench PUBLIC cutt)
+add_executable(${PROJECT_NAME}_test "src/test/test.cpp")
+target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME})
 
-add_executable(cutt_test "src/cutt_test.cpp")
-target_link_libraries(cutt_test PUBLIC cutt)
+pybind11_add_module(${PROJECT_NAME}_python "src/python/${PROJECT_NAME}.cpp" "src/python/${PROJECT_NAME}_module.cpp")
+target_include_directories(${PROJECT_NAME}_python PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(${PROJECT_NAME}_python PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+target_compile_definitions(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME}_EXPORTS)
+target_link_libraries(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME})
+set_target_properties(${PROJECT_NAME}_python PROPERTIES LIBRARY_OUTPUT_NAME "${PROJECT_NAME}")
+
+install(TARGETS ${PROJECT_NAME} ARCHIVE DESTINATION . LIBRARY DESTINATION .)
+install(FILES cutt.h DESTINATION include)
+install(TARGETS ${PROJECT_NAME}_python ${PROJECT_NAME}_bench ${PROJECT_NAME}_test DESTINATION .)
+

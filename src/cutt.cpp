@@ -71,7 +71,7 @@ void getDeviceProp(int& deviceID, cudaDeviceProp &prop) {
   }
 }
 
-cuttResult cuttPlanCheckInput(int rank, int* dim, int* permutation, size_t sizeofType) {
+static cuttResult cuttPlanCheckInput(int rank, const int* dim, const int* permutation, size_t sizeofType) {
   // Check sizeofType
   if (sizeofType != 4 && sizeofType != 8) return CUTT_INVALID_PARAMETER;
   // Check rank
@@ -96,7 +96,7 @@ cuttResult cuttPlanCheckInput(int rank, int* dim, int* permutation, size_t sizeo
   return CUTT_SUCCESS;
 }
 
-cuttResult cuttPlan(cuttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
+cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   cudaStream_t stream) {
 
 #ifdef ENABLE_NVTOOLS
@@ -204,8 +204,8 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, int* dim, int* permutation, si
   return CUTT_SUCCESS;
 }
 
-cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
-  cudaStream_t stream, void* idata, void* odata, void* alpha, void *beta) {
+cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+  cudaStream_t stream, const void* idata, void* odata, const void* alpha, const void *beta) {
 
   // Check that input parameters are valid
   cuttResult inpCheck = cuttPlanCheckInput(rank, dim, permutation, sizeofType);
@@ -336,7 +336,7 @@ cuttResult cuttDestroy(cuttHandle handle) {
   return CUTT_SUCCESS;
 }
 
-cuttResult cuttExecute(cuttHandle handle, void* idata, void* odata, void* alpha, void* beta) {
+cuttResult cuttExecute(cuttHandle handle, const void* idata, void* odata, const void* alpha, const void* beta) {
   // prevent modification when find
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);

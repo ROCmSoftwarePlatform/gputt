@@ -859,8 +859,8 @@ int cuttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
   return numActiveBlockReturn;
 }
 
-bool cuttKernel(cuttPlan_t& plan, void* dataIn, void* dataOut, void* alphaPtr,
-      void* betaPtr) {
+bool cuttKernel(cuttPlan_t& plan, const void* dataIn, void* dataOut, const void* alphaPtr,
+      const void* betaPtr) {
 
   LaunchConfig& lc = plan.launchConfig;
   TensorSplit& ts = plan.tensorSplit;

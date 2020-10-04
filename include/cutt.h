@@ -25,13 +25,23 @@ SOFTWARE.
 #ifndef CUTT_H
 #define CUTT_H
 
-#include <cuda_runtime.h>
+#include <cuda_runtime.h> // cudaStream_t
+
+#ifdef _WIN32
+#ifdef cutt_EXPORTS
+#define CUTT_API __declspec(dllexport)
+#else
+#define CUTT_API __declspec(dllimport)
+#endif
+#else // _WIN32
+#define CUTT_API
+#endif // _WIN32
 
 // Handle type that is used to store and access cutt plans
 typedef unsigned int cuttHandle;
 
 // Return value
-typedef enum cuttResult_t {
+typedef enum CUTT_API cuttResult_t {
   CUTT_SUCCESS,            // Success
   CUTT_INVALID_PLAN,       // Invalid plan handle
   CUTT_INVALID_PARAMETER,  // Invalid input parameter
@@ -45,12 +55,12 @@ typedef enum cuttResult_t {
 // This is only needed for the Umpire allocator's lifetime management:
 // - if CUTT_HAS_UMPIRE is defined, will grab Umpire's allocator;
 // - otherwise this is a no-op
-void cuttInitialize();
+void CUTT_API cuttInitialize();
 
 // Finalizes cuTT
 //
 // This is currently a no-op
-void cuttFinalize();
+void CUTT_API cuttFinalize();
 
 //
 // Create plan
@@ -66,7 +76,7 @@ void cuttFinalize();
 // Returns
 // Success/unsuccess code
 // 
-cuttResult cuttPlan(cuttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
+cuttResult CUTT_API cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   cudaStream_t stream);
 
 //
@@ -85,8 +95,8 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, int* dim, int* permutation, si
 // Returns
 // Success/unsuccess code
 // 
-cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
-  cudaStream_t stream, void* idata, void* odata, void* alpha = NULL, void* beta = NULL);
+cuttResult CUTT_API cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+  cudaStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 //
 // Destroy plan
@@ -97,7 +107,7 @@ cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, int* dim, int* permutat
 // Returns
 // Success/unsuccess code
 //
-cuttResult cuttDestroy(cuttHandle handle);
+cuttResult CUTT_API cuttDestroy(cuttHandle handle);
 
 //
 // Execute plan out-of-place; performs a tensor transposition of the form \f[ \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha * \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta * \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
@@ -112,6 +122,7 @@ cuttResult cuttDestroy(cuttHandle handle);
 // Returns
 // Success/unsuccess code
 //
-cuttResult cuttExecute(cuttHandle handle, void* idata, void* odata, void* alpha = NULL, void* beta = NULL);
+cuttResult CUTT_API cuttExecute(cuttHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 #endif // CUTT_H
+

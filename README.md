@@ -21,19 +21,24 @@ Hardware requirements:
 
 To compile cuTT library as well as test cases and benchmarks, simply do
 
-make
+```
+mkdir build
+cd build
+cmake ..
+make -j12
+```
 
 This will create the library itself:
 
  * include/cutt.h
- * lib/libcutt.a
+ * libcutt.a
 
 as well as the test and benchmarks
 
- * bin/cutt_test
- * bin/cutt_bench
+ * cutt_test
+ * cutt_bench
 
-In order to use cuTT, you only need the include (include/cutt.h) and the library (lib/libcutt.a) files.
+In order to use cuTT, you only need the include `include/cutt.h` and the library `lib/libcutt.a` files.
 
 Running tests and benchmarks
 ============================
