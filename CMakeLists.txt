@@ -64,5 +64,28 @@ if (ENABLE_UMPIRE)
     message(STATUS "Will use Umpire allocator named \"${CUTT_USES_THIS_UMPIRE_ALLOCATOR}\"")
 endif ()
 
-add_subdirectory(src)
+file(GLOB CUTT_SOURCE_FILES "src/*.cu" "src/*.cpp" "include/*.h")
 
+add_library(cutt ${CUTT_SOURCE_FILES})
+target_include_directories(cutt PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+if(ENABLE_UMPIRE)
+    target_link_libraries(cutt umpire)
+    target_compile_definitions(cutt PUBLIC CUTT_HAS_UMPIRE -DCUTT_USES_THIS_UMPIRE_ALLOCATOR=${CUTT_USES_THIS_UMPIRE_ALLOCATOR})
+endif()
+
+# install library and include
+install(TARGETS cutt
+        ARCHIVE
+            DESTINATION lib
+        LIBRARY
+            DESTINATION lib
+        )
+install(FILES cutt.h
+        DESTINATION include
+        )
+
+add_executable(cutt_bench "src/cutt_bench.cpp")
+target_link_libraries(cutt_bench PUBLIC cutt)
+
+add_executable(cutt_test "src/cutt_test.cpp")
+target_link_libraries(cutt_test PUBLIC cutt)
