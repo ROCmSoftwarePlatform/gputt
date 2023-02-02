@@ -579,7 +579,6 @@ void hipttKernelSetSharedMemConfig() {
 // Caches for PackedSplit kernels. One cache for all devices
 // NOTE: Not thread safe
 const int CACHE_SIZE = 100000;
-const int MAX_NUMWARP = (1024/32);
 const int MAX_NUMTYPE = 2;
 static int numDevices = -1;
 LRUCache<unsigned long long int, int> nabCache(CACHE_SIZE, -1);
@@ -622,6 +621,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
       }
       // Build unique key for cache
       int key_warp = (numthread/prop.warpSize - 1);
+      const int MAX_NUMWARP = (1024/prop.warpSize);
       if (key_warp >= MAX_NUMWARP) {
         printf("getNumActiveBlock maximum number of warps exceeded\n");
         exit(1);
