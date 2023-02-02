@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
   }
 
   hipCheck(hipDeviceReset());
-  hipCheck(hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte));
+  hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte); // may fail, if unsupported
 
   timerFloat = new hipttTimer(4);
   timerDouble = new hipttTimer(8);

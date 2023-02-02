@@ -157,9 +157,9 @@ int main(int argc, char *argv[]) {
 
   hipCheck(hipDeviceReset());
   if (elemsize == 4) {
-    hipCheck(hipDeviceSetSharedMemConfig(hipSharedMemBankSizeFourByte));
+    hipDeviceSetSharedMemConfig(hipSharedMemBankSizeFourByte); // may fail, if unsupported
   } else {
-    hipCheck(hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte));    
+    hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte); // may fail, if unsupported
   }
 
   printDeviceInfo();
