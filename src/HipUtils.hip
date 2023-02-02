@@ -25,18 +25,18 @@ SOFTWARE.
 
 #include <stdio.h>
 #ifdef ENABLE_NVTOOLS
-#include <nvToolsExtCuda.h>
+#include <nvToolsExtHip.h>
 #endif
-#include "CudaUtils.h"
+#include "HipUtils.h"
 
 //----------------------------------------------------------------------------------------
 
-void set_device_array_async_T(void *data, int value, const size_t ndata, cudaStream_t stream, const size_t sizeofT) {
-  cudaCheck(cudaMemsetAsync(data, value, sizeofT*ndata, stream));
+void set_device_array_async_T(void *data, int value, const size_t ndata, hipStream_t stream, const size_t sizeofT) {
+  hipCheck(hipMemsetAsync(data, value, sizeofT*ndata, stream));
 }
 
 void set_device_array_T(void *data, int value, const size_t ndata, const size_t sizeofT) {
-  cudaCheck(cudaMemset(data, value, sizeofT*ndata));
+  hipCheck(hipMemset(data, value, sizeofT*ndata));
 }
 
 
@@ -45,27 +45,27 @@ void set_device_array_T(void *data, int value, const size_t ndata, const size_t 
 //
 // Copies memory Host -> Device
 //
-void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len, cudaStream_t stream,
+void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len, hipStream_t stream,
            const size_t sizeofT) {
-  cudaCheck(cudaMemcpyAsync(d_array, h_array, sizeofT*array_len, cudaMemcpyDefault, stream));
+  hipCheck(hipMemcpyAsync(d_array, h_array, sizeofT*array_len, hipMemcpyDefault, stream));
 }
 
 void copy_HtoD_T(const void *h_array, void *d_array, size_t array_len,
      const size_t sizeofT) {
-  cudaCheck(cudaMemcpy(d_array, h_array, sizeofT*array_len, cudaMemcpyDefault));
+  hipCheck(hipMemcpy(d_array, h_array, sizeofT*array_len, hipMemcpyDefault));
 }
 
 //----------------------------------------------------------------------------------------
 //
 // Copies memory Device -> Host
 //
-void copy_DtoH_async_T(const void *d_array, void *h_array, const size_t array_len, cudaStream_t stream,
+void copy_DtoH_async_T(const void *d_array, void *h_array, const size_t array_len, hipStream_t stream,
            const size_t sizeofT) {
-  cudaCheck(cudaMemcpyAsync(h_array, d_array, sizeofT*array_len, cudaMemcpyDefault, stream));
+  hipCheck(hipMemcpyAsync(h_array, d_array, sizeofT*array_len, hipMemcpyDefault, stream));
 }
 
 void copy_DtoH_T(const void *d_array, void *h_array, const size_t array_len, const size_t sizeofT) {
-  cudaCheck(cudaMemcpy(h_array, d_array, sizeofT*array_len, cudaMemcpyDefault));
+  hipCheck(hipMemcpy(h_array, d_array, sizeofT*array_len, hipMemcpyDefault));
 }
 
 //----------------------------------------------------------------------------------------

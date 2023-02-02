@@ -22,11 +22,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#include <cuda.h>
 #include <list>
 #include <unordered_map>
-#include "CudaUtils.h"
-#include "CudaMem.h"
+#include "HipUtils.h"
+#include "HipMem.h"
 #include "hipttplan.h"
 #include "hipttkernel.h"
 #include "hipttTimer.h"
@@ -49,13 +48,13 @@ static std::mutex planStorageMutex;
 static std::atomic<hipttHandle> curHandle(0);
 
 // Table of devices that have been initialized
-static std::unordered_map<int, cudaDeviceProp> deviceProps;
+static std::unordered_map<int, hipDeviceProp_t> deviceProps;
 static std::mutex devicePropsMutex;
 
 // Checks prepares device if it's not ready yet and returns device properties
 // Also sets shared memory configuration
-void getDeviceProp(int& deviceID, cudaDeviceProp &prop) {
-  cudaCheck(cudaGetDevice(&deviceID));
+void getDeviceProp(int& deviceID, hipDeviceProp_t &prop) {
+  hipCheck(hipGetDevice(&deviceID));
 
   // need to lock this function	
   std::lock_guard<std::mutex> lock(devicePropsMutex);
@@ -63,7 +62,7 @@ void getDeviceProp(int& deviceID, cudaDeviceProp &prop) {
   auto it = deviceProps.find(deviceID);
   if (it == deviceProps.end()) {
     // Get device properties and store it for later use
-    cudaCheck(cudaGetDeviceProperties(&prop, deviceID));
+    hipCheck(hipGetDeviceProperties(&prop, deviceID));
     hipttKernelSetSharedMemConfig();
     deviceProps.insert({deviceID, prop});
   } else {
@@ -97,7 +96,7 @@ static hipttResult hipttPlanCheckInput(int rank, const int* dim, const int* perm
 }
 
 hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  cudaStream_t stream) {
+  hipStream_t stream) {
 
 #ifdef ENABLE_NVTOOLS
   gpuRangeStart("init");
@@ -119,7 +118,7 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
 
   // Prepare device
   int deviceID;
-  cudaDeviceProp prop;
+  hipDeviceProp_t prop;
   getDeviceProp(deviceID, prop);
 
   // Reduce ranks
@@ -205,7 +204,7 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
 }
 
 hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  cudaStream_t stream, const void* idata, void* odata, const void* alpha, const void *beta) {
+  hipStream_t stream, const void* idata, void* odata, const void* alpha, const void *beta) {
 
   // Check that input parameters are valid
   hipttResult inpCheck = hipttPlanCheckInput(rank, dim, permutation, sizeofType);
@@ -225,7 +224,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
 
   // Prepare device
   int deviceID;
-  cudaDeviceProp prop;
+  hipDeviceProp_t prop;
   getDeviceProp(deviceID, prop);
 
   // Reduce ranks
@@ -266,7 +265,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
     it->activate();
     // Clear output data to invalidate caches
     set_device_array<char>((char *)odata, -1, numBytes);
-    cudaCheck(cudaDeviceSynchronize());
+    hipCheck(hipDeviceSynchronize());
     timer.start();
     // Execute plan
     if (!hipttKernel(*it, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
@@ -310,7 +309,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
   return CUTT_SUCCESS;
 }
 
-void CUDART_CB hipttDestroy_callback(cudaStream_t stream, cudaError_t status, void *userData){
+void hipttDestroy_callback(hipStream_t stream, hipError_t status, void *userData){
   hipttPlan_t* plan = (hipttPlan_t*) userData;
   delete plan;
 }
@@ -322,11 +321,11 @@ hipttResult hipttDestroy(hipttHandle handle) {
 #ifdef CUTT_HAS_UMPIRE
   // get the pointer hipttPlan_t
   hipttPlan_t* plan = it->second;
-  cudaStream_t stream = plan->stream;
+  hipStream_t stream = plan->stream;
   // Delete entry from plan storage
   planStorage.erase(it);
   // register callback to deallocate plan
-  cudaStreamAddCallback(stream, hipttDestroy_callback, plan, 0);
+  hipStreamAddCallback(stream, hipttDestroy_callback, plan, 0);
 #else
   // Delete instance of hipttPlan_t	 
   delete it->second;	  
@@ -347,7 +346,7 @@ hipttResult hipttExecute(hipttHandle handle, const void* idata, void* odata, con
   hipttPlan_t& plan = *(it->second);
 
   int deviceID;
-  cudaCheck(cudaGetDevice(&deviceID));
+  hipCheck(hipGetDevice(&deviceID));
   if (deviceID != plan.deviceID) return CUTT_INVALID_DEVICE;
 
   if (!hipttKernel(plan, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;

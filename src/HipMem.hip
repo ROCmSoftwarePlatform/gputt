@@ -1,5 +1,5 @@
 
-#include "CudaMem.h"
+#include "HipMem.h"
 
 //----------------------------------------------------------------------------------------
 //
@@ -11,7 +11,7 @@ void allocate_device_T(void **pp, const size_t len, const size_t sizeofT) {
 #ifdef CUTT_HAS_UMPIRE
   *pp = hiptt_umpire_allocator.allocate(sizeofT*len);
 #else
-  cudaCheck(cudaMalloc(pp, sizeofT*len));
+  hipCheck(hipMalloc(pp, sizeofT*len));
 #endif
 }
 
@@ -25,7 +25,7 @@ void deallocate_device_T(void **pp) {
   hiptt_umpire_allocator.deallocate((void *) (*pp) );
 #else
   if (*pp != NULL) {
-    cudaCheck(cudaFree((void *)(*pp)));
+    hipCheck(hipFree((void *)(*pp)));
     *pp = NULL;
   }
 #endif

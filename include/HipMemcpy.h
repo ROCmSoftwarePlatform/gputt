@@ -25,10 +25,10 @@ SOFTWARE.
 #ifndef CUDAMEMCPY_H
 #define CUDAMEMCPY_H
 
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 
-template <typename T> void scalarCopy(const int n, const T* data_in, T* data_out, cudaStream_t stream);
-template <typename T> void vectorCopy(const int n, T* data_in, T* data_out, cudaStream_t stream);
-void memcpyFloat(const int n, float* data_in, float* data_out, cudaStream_t stream);
+template <typename T> void scalarCopy(const int n, const T* data_in, T* data_out, hipStream_t stream);
+template <typename T> void vectorCopy(const int n, T* data_in, T* data_out, hipStream_t stream);
+void memcpyFloat(const int n, float* data_in, float* data_out, hipStream_t stream);
 
 #endif // CUDAMEMCPY_H

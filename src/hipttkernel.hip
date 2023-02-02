@@ -22,12 +22,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#include <cuda.h>
-#include "CudaUtils.h"
+
+#include "HipUtils.h"
 #include "LRUCache.h"
 #include "hipttkernel.h"
 
 #define RESTRICT __restrict__
+
+#ifdef __HIP_PLATFORM_HCC__
+#define __ballot_sync(mask, pred) __ballot(pred)
+#define __shfl_sync __shfl
+#define __shfl_xor_sync __shfl_xor
+#endif
 
 //
 // Transpose when Mm and Mk don't overlap and contain only single rank
@@ -220,11 +226,12 @@ __global__ void transposePacked(
     for (int j=0;j < numRegStorage;j++) {
       int posMmk = threadIdx.x + j*blockDim.x;
       int posOut = posMbarOut + posMmkOut[j];
-      if (posMmk < volMmk) 
+      if (posMmk < volMmk) { 
         if( betaIsZero )
            dataOut[posOut] = alpha * shBuffer[posSh[j]];
         else
            dataOut[posOut] = alpha * shBuffer[posSh[j]] + beta * dataOut[posOut];
+      }
     }
 
 
@@ -352,11 +359,12 @@ __global__ void transposePackedSplit(
     for (int j=0;j < numRegStorage;j++) {
       int posMmk = threadIdx.x + j*blockDim.x;
       int posOut = posMbarOut + posMmkOut[j];
-      if (posMmk < volMmkSplit) 
+      if (posMmk < volMmkSplit) { 
         if( betaIsZero )
            dataOut[posOut] = alpha * shBuffer[posSh[j]];
         else
            dataOut[posOut] = alpha * shBuffer[posSh[j]] + beta * dataOut[posOut];
+      }
     }
 
   }
@@ -544,27 +552,27 @@ __global__ void transposeTiledCopy(
 // Sets shared memory bank configuration for all kernels. Needs to be called once per device.
 //
 void hipttKernelSetSharedMemConfig() {  
-#define CALL(NREG) cudaCheck(cudaFuncSetSharedMemConfig(transposePacked<float, NREG, true>, cudaSharedMemBankSizeFourByte ))
+#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePacked<float, NREG, true>), hipSharedMemBankSizeFourByte ))
 #include "calls.h"
 #undef CALL
 
-#define CALL(NREG) cudaCheck(cudaFuncSetSharedMemConfig(transposePacked<double, NREG, true>, cudaSharedMemBankSizeEightByte ))
+#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePacked<double, NREG, true>), hipSharedMemBankSizeEightByte ))
 #include "calls.h"
 #undef CALL
 
-#define CALL(NREG) cudaCheck(cudaFuncSetSharedMemConfig(transposePackedSplit<float, NREG, true>, cudaSharedMemBankSizeFourByte ))
+#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePackedSplit<float, NREG, true>), hipSharedMemBankSizeFourByte ))
 #include "calls.h"
 #undef CALL
 
-#define CALL(NREG) cudaCheck(cudaFuncSetSharedMemConfig(transposePackedSplit<double, NREG, true>, cudaSharedMemBankSizeEightByte ))
+#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePackedSplit<double, NREG, true>), hipSharedMemBankSizeEightByte ))
 #include "calls.h"
 #undef CALL
 
-  cudaCheck(cudaFuncSetSharedMemConfig(transposeTiled<float, true>, cudaSharedMemBankSizeFourByte));
-  cudaCheck(cudaFuncSetSharedMemConfig(transposeTiledCopy<float, true>, cudaSharedMemBankSizeFourByte));
+  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiled<float, true>), hipSharedMemBankSizeFourByte));
+  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiledCopy<float, true>), hipSharedMemBankSizeFourByte));
 
-  cudaCheck(cudaFuncSetSharedMemConfig(transposeTiled<double, true>, cudaSharedMemBankSizeEightByte));
-  cudaCheck(cudaFuncSetSharedMemConfig(transposeTiledCopy<double, true>, cudaSharedMemBankSizeEightByte));
+  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiled<double, true>), hipSharedMemBankSizeEightByte));
+  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiledCopy<double, true>), hipSharedMemBankSizeEightByte));
 
 }
 
@@ -580,7 +588,7 @@ LRUCache<unsigned long long int, int> nabCache(CACHE_SIZE, -1);
 // Returns the maximum number of active blocks per SM
 //
 int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig& lc,
-  const int deviceID, const cudaDeviceProp& prop) {
+  const int deviceID, const hipDeviceProp_t& prop) {
 
   int numActiveBlock;
   int numthread = lc.numthread.x * lc.numthread.y * lc.numthread.z;
@@ -595,7 +603,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     case Packed:
     {
 #define CALL0(TYPE, NREG) \
-  cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
+  hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
     transposePacked<TYPE, NREG, true>, numthread, lc.shmemsize)
       switch(lc.numRegStorage) {
 #define CALL(ICASE) case ICASE: if (sizeofType == 4) CALL0(float,  ICASE); if (sizeofType == 8) CALL0(double, ICASE); break
@@ -610,7 +618,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     {
       // Allocate cache structure if needed
       if (numDevices == -1) {
-        cudaCheck(cudaGetDeviceCount(&numDevices));
+        hipCheck(hipGetDeviceCount(&numDevices));
       }
       // Build unique key for cache
       int key_warp = (numthread/prop.warpSize - 1);
@@ -631,7 +639,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
       if (numActiveBlock == -1) {
         // key not found in cache, determine value and add it to cache
 #define CALL0(TYPE, NREG) \
-  cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
+  hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
     transposePackedSplit<TYPE, NREG, true>, numthread, lc.shmemsize)
       switch(lc.numRegStorage) {
 #define CALL(ICASE) case ICASE: if (sizeofType == 4) CALL0(float,  ICASE); if (sizeofType == 8) CALL0(double, ICASE); break
@@ -647,10 +655,10 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     case Tiled:
     {
       if (sizeofType == 4) {
-        cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiled<float, true>, numthread, lc.shmemsize);
       } else {
-        cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiled<double, true>, numthread, lc.shmemsize);
       }
     }
@@ -659,10 +667,10 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     case TiledCopy:
     {
       if (sizeofType == 4) {
-        cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiledCopy<float, true>, numthread, lc.shmemsize);
       } else {
-        cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiledCopy<double, true>, numthread, lc.shmemsize);
       }
     }
@@ -685,7 +693,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
 // lc.numRegStorage  (for Packed method)
 //
 int hipttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
-  const int deviceID, const cudaDeviceProp& prop, LaunchConfig& lc) {
+  const int deviceID, const hipDeviceProp_t& prop, LaunchConfig& lc) {
 
   // Return value of numActiveBlock
   int numActiveBlockReturn = -1;
@@ -883,8 +891,8 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
          printf("hipTT ERROR: this case still has to be implemented\n"); 
          return false;
       }
-      cudaCheck(cudaMemcpyAsync(dataOut, dataIn, ts.volMmk*ts.volMbar*plan.sizeofType,
-        cudaMemcpyDefault, plan.stream));
+      hipCheck(hipMemcpyAsync(dataOut, dataIn, ts.volMmk*ts.volMbar*plan.sizeofType,
+        hipMemcpyDefault, plan.stream));
     }
     break;
 
@@ -990,6 +998,6 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
 
   }
 
-  cudaCheck(cudaGetLastError());
+  hipCheck(hipGetLastError());
   return true;
 }

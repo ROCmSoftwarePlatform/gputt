@@ -27,8 +27,8 @@ SOFTWARE.
 #include <unordered_set>
 #include <cmath>
 #include <random>
-#include "CudaUtils.h"
-#include "CudaMem.h"
+#include "HipUtils.h"
+#include "HipMem.h"
 #include "hipttplan.h"
 #include "hipttkernel.h"
 #include "hipttGpuModel.h"
@@ -486,7 +486,7 @@ bool planExists(TensorSplit& ts, std::list<hipttPlan_t>& plans) {
 }
 
 bool hipttPlan_t::createTrivialPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
 
   if (rank == 1) {
     TensorSplit ts;
@@ -505,7 +505,7 @@ bool hipttPlan_t::createTrivialPlans(const int rank, const int* dim, const int* 
 }
 
 bool hipttPlan_t::createTiledPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
 
   if (permutation[0] != 0 && rank > 1) {
     TensorSplit ts;
@@ -524,7 +524,7 @@ bool hipttPlan_t::createTiledPlans(const int rank, const int* dim, const int* pe
 }
 
 bool hipttPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
 
   // Count number of Mm and Mk which are the same
   int numMmMkSame = 0;
@@ -553,7 +553,7 @@ bool hipttPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int
 }
 
 bool hipttPlan_t::createPackedPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
 
   LaunchConfig lc;
   for (int numMm=1;numMm < rank;numMm++) {
@@ -576,7 +576,7 @@ bool hipttPlan_t::createPackedPlans(const int rank, const int* dim, const int* p
 }
 
 bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
 
   LaunchConfig lc;
   for (int numMm=1;numMm < rank;numMm++) {
@@ -693,7 +693,7 @@ bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
 //
 bool hipttPlan_t::createPlans(const int rank, const int* dim, const int* permutation,
   const int rankRed, const int* dimRed, const int* permutationRed,
-  const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
 
   size_t size0 = plans.size();
   /* if (!createTiledCopyPlans(rank, dim, permutation, sizeofType, deviceID, prop, plans)) return false;*/
@@ -780,7 +780,7 @@ std::list<hipttPlan_t>::iterator choosePlanHeuristic(std::list<hipttPlan_t>& pla
   return bestIt;
 }
 
-void printMatlab(cudaDeviceProp& prop, std::list<hipttPlan_t>& plans, std::vector<double>& times) {
+void printMatlab(hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans, std::vector<double>& times) {
   static int count = 0;
   count++;
   int i = 0;
@@ -1063,7 +1063,7 @@ bool hipttPlan_t::setup(const int rank_in, const int* dim, const int* permutatio
 //
 // Count the number of cycles using the MWP-CWP model
 //
-bool hipttPlan_t::countCycles(cudaDeviceProp& prop, const int numPosMbarSample) {
+bool hipttPlan_t::countCycles(hipDeviceProp_t& prop, const int numPosMbarSample) {
 
   // Number of elements that are loaded per memory transaction:
   // 128 bytes per transaction
@@ -1661,7 +1661,7 @@ void hipttPlan_t::nullDevicePointers() {
 }
 
 hipttPlan_t::hipttPlan_t() {
-  cudaCheck(cudaGetDevice(&deviceID));
+  hipCheck(hipGetDevice(&deviceID));
   stream = 0;
   numActiveBlock = 0;
   nullDevicePointers();
@@ -1676,6 +1676,6 @@ hipttPlan_t::~hipttPlan_t() {
   if (Mm != NULL) deallocate_device<TensorConv>(&Mm);
 }
 
-void hipttPlan_t::setStream(cudaStream_t stream_in) {
+void hipttPlan_t::setStream(hipStream_t stream_in) {
   stream = stream_in;
 }

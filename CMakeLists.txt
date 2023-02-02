@@ -25,8 +25,18 @@ if (NOT CMAKE_CXX_EXTENSIONS)
     set(CMAKE_CXX_EXTENSIONS OFF)
 endif (NOT CMAKE_CXX_EXTENSIONS)
 
-# enable cuda
-enable_language(CUDA)
+# enable HIP
+enable_language(HIP)
+
+if(NOT DEFINED HIP_PATH)
+    if(NOT DEFINED ENV{HIP_PATH})
+        set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
+    else()
+        set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
+    endif()
+endif()
+set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+find_package(hip REQUIRED)
 
 if (NOT CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD 11)
@@ -84,25 +94,26 @@ if (ENABLE_UMPIRE)
     message(STATUS "Will use Umpire allocator named \"${CUTT_USES_THIS_UMPIRE_ALLOCATOR}\"")
 endif ()
 
-file(GLOB CUTT_SOURCE_FILES "src/*.cu" "src/*.cpp" "include/*.h")
+file(GLOB CUTT_SOURCE_FILES "src/*.hip" "src/*.cpp" "include/*.h")
 
 add_library(${PROJECT_NAME} STATIC ${CUTT_SOURCE_FILES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(${PROJECT_NAME} hip::amdhip64)
 if(ENABLE_UMPIRE)
     target_link_libraries(${PROJECT_NAME} umpire)
     target_compile_definitions(${PROJECT_NAME} PUBLIC CUTT_HAS_UMPIRE CUTT_USES_THIS_UMPIRE_ALLOCATOR=${CUTT_USES_THIS_UMPIRE_ALLOCATOR})
 endif()
 
-add_executable(${PROJECT_NAME}_bench "src/bench/bench.cpp")
+add_executable(${PROJECT_NAME}_bench "src/bench/bench.hip")
 target_link_libraries(${PROJECT_NAME}_bench PUBLIC ${PROJECT_NAME})
 
-add_executable(${PROJECT_NAME}_test "src/test/test.cpp")
+add_executable(${PROJECT_NAME}_test "src/test/test.hip")
 target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME})
 
-pybind11_add_module(${PROJECT_NAME}_python "src/python/${PROJECT_NAME}.cpp" "src/python/${PROJECT_NAME}_module.cpp")
+pybind11_add_module(${PROJECT_NAME}_python "src/python/${PROJECT_NAME}.hip" "src/python/${PROJECT_NAME}_module.hip")
 target_include_directories(${PROJECT_NAME}_python PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_include_directories(${PROJECT_NAME}_python PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_compile_definitions(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME}_EXPORTS)

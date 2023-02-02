@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef CUTT_H
 #define CUTT_H
 
-#include <cuda_runtime.h> // cudaStream_t
+#include <hip/hip_runtime.h> // hipStream_t
 
 #ifdef _WIN32
 #ifdef hiptt_EXPORTS
@@ -77,7 +77,7 @@ void CUTT_API hipttFinalize();
 // Success/unsuccess code
 // 
 hipttResult CUTT_API hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  cudaStream_t stream);
+  hipStream_t stream);
 
 //
 // Create plan and choose implementation by measuring performance
@@ -96,7 +96,7 @@ hipttResult CUTT_API hipttPlan(hipttHandle* handle, int rank, const int* dim, co
 // Success/unsuccess code
 // 
 hipttResult CUTT_API hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  cudaStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
+  hipStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 //
 // Destroy plan

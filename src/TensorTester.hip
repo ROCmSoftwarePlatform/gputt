@@ -26,10 +26,13 @@ SOFTWARE.
 //
 // Testing utilities
 //
-#include <cuda.h>
-#include "CudaUtils.h"
-#include "CudaMem.h"
+#include "HipUtils.h"
+#include "HipMem.h"
 #include "TensorTester.h"
+
+#ifdef __HIP_PLATFORM_HCC__
+#define __shfl_sync __shfl
+#endif
 
 __global__ void setTensorCheckPatternKernel(unsigned int* data, unsigned int ndata) {
   for (unsigned int i = threadIdx.x + blockIdx.x*blockDim.x;i < ndata;i += blockDim.x*gridDim.x) {
@@ -126,7 +129,7 @@ void TensorTester::setTensorCheckPattern(unsigned int* data, unsigned int ndata)
   int numthread = 512;
   int numblock = min(65535, (ndata - 1)/numthread + 1 );
   setTensorCheckPatternKernel<<< numblock, numthread >>>(data, ndata);
-  cudaCheck(cudaGetLastError());
+  hipCheck(hipGetLastError());
 }
 
 // void calcTensorConv(const int rank, const int* dim, const int* permutation,
@@ -191,11 +194,11 @@ template<typename T> bool TensorTester::checkTranspose(int rank, int* dim, int* 
   int numblock = min(maxNumblock, (ndata - 1)/numthread + 1 );
   int shmemsize = numthread*sizeof(unsigned int);
   checkTransposeKernel<<< numblock, numthread, shmemsize >>>(data, ndata, rank, d_tensorConv, d_error, d_fail);
-  cudaCheck(cudaGetLastError());
+  hipCheck(hipGetLastError());
 
   int h_fail;
   copy_DtoH<int>(d_fail, &h_fail, 1);
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
 
   if (h_fail) {
     copy_DtoH_sync<TensorError_t>(d_error, h_error, maxNumblock);

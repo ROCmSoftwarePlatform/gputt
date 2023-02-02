@@ -22,12 +22,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#include <cuda.h>
-#include "CudaUtils.h"
-#include "CudaMem.h"
+
+#include "HipUtils.h"
+#include "HipMem.h"
 #include "hipttGpuModelKernel.h"
 
 #define RESTRICT //__restrict__
+
+#ifdef __HIP_PLATFORM_HCC__
+#define __any_sync(mask, pred) __any(pred)
+#define __ballot_sync(mask, pred) __ballot(pred)
+#define __shfl_sync __shfl
+#define __shfl_down_sync __shfl_down
+#define __shfl_xor_sync __shfl_xor
+#endif
 
 //
 // Global memory access statistics
@@ -189,7 +197,7 @@ __global__ void runCountersKernel(const int* posData, const int numPosData,
   for (int i=threadIdx.x + blockIdx.x*blockDim.x;i < numPosData;i+=blockDim.x*gridDim.x) {
     int pos = posData[i];
     int flag = (pos == -1);
-    int ffsval = __ffs(__ballot_sync(0xffffffff,flag)) - 1;
+    int ffsval = __ffs(static_cast<int>(__ballot_sync(0xffffffff,flag))) - 1;
     int n = (__any_sync(0xffffffff,flag)) ? ffsval : warpSize;
     int tran = countGlTransactions(pos, n, accWidth, warpLane);
     int cl_full = 0;
@@ -670,12 +678,12 @@ void runCounters(const int warpSize, const int* hostPosData, const int numPosDat
   int nblock = (numPosData - 1)/nthread + 1;
   runCountersKernel<<< nblock, nthread >>>(devPosData, numPosData,
     accWidth, cacheWidth, dev_tran, dev_cl_full, dev_cl_part);
-  cudaCheck(cudaGetLastError());
+  hipCheck(hipGetLastError());
 
   copy_DtoH<int>(dev_tran,    host_tran,    numWarp);
   copy_DtoH<int>(dev_cl_full, host_cl_full, numWarp);
   copy_DtoH<int>(dev_cl_part, host_cl_part, numWarp);
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
 
   deallocate_device<int>(&dev_tran);
   deallocate_device<int>(&dev_cl_full);
@@ -762,11 +770,11 @@ bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheW
 
   }
 
-  cudaCheck(cudaGetLastError());
+  hipCheck(hipGetLastError());
 
   MemStat hostMemStat;
   copy_DtoH<MemStat>(devMemStat, &hostMemStat, 1, plan.stream);
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
   deallocate_device<MemStat>(&devMemStat);
 
   gld_tran   = hostMemStat.gld_tran;

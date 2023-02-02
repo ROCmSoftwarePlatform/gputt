@@ -24,27 +24,27 @@ SOFTWARE.
 *******************************************************************************/
 
 #include "hipttTimer.h"
-#include "CudaUtils.h"
+#include "HipUtils.h"
 // #include <limits>       // std::numeric_limits
 #include <algorithm>
 #ifdef CUDA_EVENT_TIMER
-#include "CudaUtils.h"
+#include "HipUtils.h"
 #endif
 
 #ifdef CUDA_EVENT_TIMER
 Timer::Timer() {
-  cudaCheck(cudaEventCreate(&tmstart));
-  cudaCheck(cudaEventCreate(&tmend));
+  hipCheck(hipEventCreate(&tmstart));
+  hipCheck(hipEventCreate(&tmend));
 }
 Timer::~Timer() {
-  cudaCheck(cudaEventDestroy(tmstart));
-  cudaCheck(cudaEventDestroy(tmend));
+  hipCheck(hipEventDestroy(tmstart));
+  hipCheck(hipEventDestroy(tmend));
 }
 #endif
 
 void Timer::start() {
 #ifdef CUDA_EVENT_TIMER
-  cudaCheck(cudaEventRecord(tmstart, 0));
+  hipCheck(hipEventRecord(tmstart, 0));
 #else
   tmstart = std::chrono::high_resolution_clock::now();
 #endif
@@ -52,10 +52,10 @@ void Timer::start() {
 
 void Timer::stop() {
 #ifdef CUDA_EVENT_TIMER
-  cudaCheck(cudaEventRecord(tmend, 0));
-  cudaCheck(cudaEventSynchronize(tmend));
+  hipCheck(hipEventRecord(tmend, 0));
+  hipCheck(hipEventSynchronize(tmend));
 #else
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
   tmend = std::chrono::high_resolution_clock::now();
 #endif
 }
@@ -66,7 +66,7 @@ void Timer::stop() {
 double Timer::seconds() {
 #ifdef CUDA_EVENT_TIMER
   float ms;
-  cudaCheck(cudaEventElapsedTime(&ms, tmstart, tmend));
+  hipCheck(hipEventElapsedTime(&ms, tmstart, tmend));
   return (double)(ms/1000.0f);
 #else
   return std::chrono::duration_cast< std::chrono::duration<double> >(tmend - tmstart).count();

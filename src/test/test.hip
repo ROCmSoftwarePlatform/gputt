@@ -28,8 +28,8 @@ SOFTWARE.
 #include <cstring>         // strcmp
 #include <cmath>
 #include "hiptt.h"
-#include "CudaUtils.h"
-#include "CudaMem.h"
+#include "HipUtils.h"
+#include "HipMem.h"
 #include "TensorTester.h"
 #include "hipttTimer.h"
 #include "hipttGpuModel.h"  // testCounters
@@ -83,11 +83,11 @@ int main(int argc, char *argv[]) {
   }
 
   if (gpuid >= 0) {
-    cudaCheck(cudaSetDevice(gpuid));
+    hipCheck(hipSetDevice(gpuid));
   }
 
-  cudaCheck(cudaDeviceReset());
-  cudaCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte));
+  hipCheck(hipDeviceReset());
+  hipCheck(hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte));
 
   timerFloat = new hipttTimer(4);
   timerDouble = new hipttTimer(8);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
   delete timerFloat;
   delete timerDouble;
 
-  cudaCheck(cudaDeviceReset());
+  hipCheck(hipDeviceReset());
   return 0;
 }
 
@@ -373,12 +373,12 @@ bool test4() {
 
   const int numStream = 10;
 
-  cudaStream_t streams[numStream];
+  hipStream_t streams[numStream];
   for (int i=0;i < numStream;i++) {
-    cudaCheck(cudaStreamCreate(&streams[i]));
+    hipCheck(hipStreamCreate(&streams[i]));
   }
 
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
 
   hipttHandle plans[numStream];
 
@@ -387,15 +387,15 @@ bool test4() {
     hipttCheck(hipttExecute(plans[i], dataIn, dataOut));
   }
 
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
 
   bool run_ok = tester->checkTranspose(dim.size(), dim.data(), permutation.data(), (long long int *)dataOut);
 
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
 
   for (int i=0;i < numStream;i++) {
     hipttCheck(hipttDestroy(plans[i]));
-    cudaCheck(cudaStreamDestroy(streams[i]));
+    hipCheck(hipStreamDestroy(streams[i]));
   }
 
   return run_ok;
@@ -462,7 +462,7 @@ bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
   hipttHandle plan;
   hipttCheck(hipttPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
   set_device_array<T>((T *)dataOut, -1, vol);
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
 
   if (vol > 1000000) timer->start(dim, permutation);
   hipttCheck(hipttExecute(plan, dataIn, dataOut));

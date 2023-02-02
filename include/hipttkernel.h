@@ -1,7 +1,8 @@
 /******************************************************************************
 MIT License
 
-Copyright (c) 2016 Chong Peng Virginia Tech
+Copyright (c) 2016 Antti-Pekka Hynninen
+Copyright (c) 2016 Oak Ridge National Laboratory (UT-Batelle)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,41 +22,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
+#ifndef CUTTKERNEL_H
+#define CUTTKERNEL_H
+#include "hipttplan.h"
 
-#ifndef CUDAMEM_H
-#define CUDAMEM_H
+void hipttKernelSetSharedMemConfig();
 
-#include "CudaUtils.h"
+int hipttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
+             const int deviceID, const hipDeviceProp_t& prop, LaunchConfig& lc);
 
-#ifdef CUTT_HAS_UMPIRE
-#include <umpire/Umpire.hpp>
+bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const void* alpha, const void* beta);
 
-// defined in hiptt.cpp
-extern umpire::Allocator hiptt_umpire_allocator;
-#endif
-
-void allocate_device_T(void **pp, const size_t len, const size_t sizeofT);
-//----------------------------------------------------------------------------------------
-//
-// Allocate gpu memory
-// pp = memory pointer
-// len = length of the array
-//
-template <class T>
-void allocate_device(T **pp, const size_t len) {
-  allocate_device_T((void **)pp, len, sizeof(T));
-}
-
-void deallocate_device_T(void **pp);
-//----------------------------------------------------------------------------------------
-//
-// Deallocate gpu memory
-// pp = memory pointer
-//
-template <class T>
-void deallocate_device(T **pp) {
-  deallocate_device_T((void **)pp);
-}
-
-
-#endif //CUDAMEM_H
+#endif // CUTTKERNEL_H

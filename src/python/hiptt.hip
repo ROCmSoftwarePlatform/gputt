@@ -47,7 +47,7 @@ class hipTT
 	int rank;
 	const std::vector<int> dim;
 	const std::vector<int> permutation;
-	cudaStream_t stream;
+	hipStream_t stream;
 
 public :
 
@@ -61,8 +61,8 @@ public :
 
 		// Defer hipttPlan to the first use, as we don't know the type yet.
 
-		py::object pycuda = py::module::import("pycuda");
-		py::object pystream = pycuda.attr("driver").attr("Stream");
+		py::object pyhip = py::module::import("pyhip");
+		py::object pystream = pyhip.attr("driver").attr("Stream");
 
 		if (stream_.is_none())
 			stream = 0;
@@ -71,12 +71,12 @@ public :
 			if (!py::isinstance(stream_, pystream))
 			{
 				std::stringstream ss;
-				ss << "Stream argument must be a pycuda.driver.stream, got: ";
+				ss << "Stream argument must be a pyhip.driver.stream, got: ";
 				ss << py::str(stream_);
 				throw std::invalid_argument(ss.str());
 			}
 
-			stream = (cudaStream_t)stream_.attr("handle_int").cast<intptr_t>();
+			stream = (hipStream_t)stream_.attr("handle_int").cast<intptr_t>();
 		}
 	}
 
@@ -89,21 +89,21 @@ public :
 		// - otherwise this is a no-op
 		std::call_once(hipttInitialized, [](){ hipttInitialize(); });
 
-		py::object pycuda = py::module::import("pycuda");
-		py::object pygpuarray = pycuda.attr("gpuarray");
-		py::object pystream = pycuda.attr("driver").attr("Stream");
+		py::object pyhip = py::module::import("pyhip");
+		py::object pygpuarray = pyhip.attr("gpuarray");
+		py::object pystream = pyhip.attr("driver").attr("Stream");
 
 		if (!py::isinstance(idata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Input array must be a pycuda.gpuarray, got: ";
+			ss << "Input array must be a pyhip.gpuarray, got: ";
 			ss << py::str(idata);
 			throw std::invalid_argument(ss.str());
 		}
 		if (!py::isinstance(odata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Output array must be a pycuda.gpuarray, got: ";
+			ss << "Output array must be a pyhip.gpuarray, got: ";
 			ss << py::str(odata);
 			throw std::invalid_argument(ss.str());
 		}
@@ -115,12 +115,12 @@ public :
 			if (!py::isinstance(stream_, pystream))
 			{
 				std::stringstream ss;
-				ss << "Stream argument must be a pycuda.driver.stream, got: ";
+				ss << "Stream argument must be a pyhip.driver.stream, got: ";
 				ss << py::str(stream_);
 				throw std::invalid_argument(ss.str());
 			}
 
-			stream = (cudaStream_t)stream_.attr("handle_int").cast<intptr_t>();
+			stream = (hipStream_t)stream_.attr("handle_int").cast<intptr_t>();
 		}
 
 		if (!idata.attr("dtype").cast<pybind11::dtype>().is(
@@ -145,21 +145,21 @@ public :
 
 	void execute(const py::object& idata, py::object& odata, const py::object& pyalpha, const py::object& pybeta)
 	{
-		py::object pycuda = py::module::import("pycuda");
-		py::object pygpuarray = pycuda.attr("gpuarray").attr("GPUArray");
-		py::object pystream = pycuda.attr("driver").attr("Stream");
+		py::object pyhip = py::module::import("pyhip");
+		py::object pygpuarray = pyhip.attr("gpuarray").attr("GPUArray");
+		py::object pystream = pyhip.attr("driver").attr("Stream");
 
 		if (!py::isinstance(idata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Input array must be a pycuda.gpuarray, got: ";
+			ss << "Input array must be a pyhip.gpuarray, got: ";
 			ss << py::str(idata);
 			throw std::invalid_argument(ss.str());
 		}
 		if (!py::isinstance(odata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Output array must be a pycuda.gpuarray, got: ";
+			ss << "Output array must be a pyhip.gpuarray, got: ";
 			ss << py::str(odata);
 			throw std::invalid_argument(ss.str());
 		}

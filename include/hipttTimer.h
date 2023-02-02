@@ -37,7 +37,7 @@ SOFTWARE.
 #define CUDA_EVENT_TIMER
 // -------------------------------------------------
 #ifdef CUDA_EVENT_TIMER
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 #endif
 
 //
@@ -46,7 +46,7 @@ SOFTWARE.
 class Timer {
 private:
 #ifdef CUDA_EVENT_TIMER
-  cudaEvent_t tmstart, tmend;
+  hipEvent_t tmstart, tmend;
 #else
   std::chrono::high_resolution_clock::time_point tmstart, tmend;
 #endif

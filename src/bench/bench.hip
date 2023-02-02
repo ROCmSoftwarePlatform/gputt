@@ -31,11 +31,11 @@ SOFTWARE.
 #include <cctype>
 #include <random>
 #include "hiptt.h"
-#include "CudaUtils.h"
-#include "CudaMem.h"
+#include "HipUtils.h"
+#include "HipMem.h"
 #include "TensorTester.h"
 #include "hipttTimer.h"
-#include "CudaMemcpy.h"
+#include "HipMemcpy.h"
 #include "int_vector.h"
 
 #define MILLION 1000000
@@ -152,14 +152,14 @@ int main(int argc, char *argv[]) {
   }
 
   if (gpuid >= 0) {
-    cudaCheck(cudaSetDevice(gpuid));
+    hipCheck(hipSetDevice(gpuid));
   }
 
-  cudaCheck(cudaDeviceReset());
+  hipCheck(hipDeviceReset());
   if (elemsize == 4) {
-    cudaCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeFourByte));
+    hipCheck(hipDeviceSetSharedMemConfig(hipSharedMemBankSizeFourByte));
   } else {
-    cudaCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte));    
+    hipCheck(hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte));    
   }
 
   printDeviceInfo();
@@ -364,9 +364,9 @@ end:
 
   delete timer;
 
-  cudaCheck(cudaDeviceSynchronize());
+  hipCheck(hipDeviceSynchronize());
 
-  cudaCheck(cudaDeviceReset());
+  hipCheck(hipDeviceReset());
   return 0;
 }
 
@@ -811,7 +811,7 @@ bool bench_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
 
   for (int i=0;i < 4;i++) {
     set_device_array<T>((T *)dataOut, -1, vol);
-    cudaCheck(cudaDeviceSynchronize());
+    hipCheck(hipDeviceSynchronize());
 
     timer->start(dim, permutation);
     hipttCheck(hipttExecute(plan, dataIn, dataOut));
@@ -844,7 +844,7 @@ bool bench_memcpy(int numElem) {
     hipttTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
-      cudaCheck(cudaDeviceSynchronize());
+      hipCheck(hipDeviceSynchronize());
       timer.start(dim, permutation);
       scalarCopy<T>(numElem, (T *)dataIn, (T *)dataOut, 0);
       timer.stop();
@@ -858,7 +858,7 @@ bool bench_memcpy(int numElem) {
     hipttTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
-      cudaCheck(cudaDeviceSynchronize());
+      hipCheck(hipDeviceSynchronize());
       timer.start(dim, permutation);
       vectorCopy<T>(numElem, (T *)dataIn, (T *)dataOut, 0);
       timer.stop();
@@ -872,7 +872,7 @@ bool bench_memcpy(int numElem) {
     hipttTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
-      cudaCheck(cudaDeviceSynchronize());
+      hipCheck(hipDeviceSynchronize());
       timer.start(dim, permutation);
       memcpyFloat(numElem*sizeof(T)/sizeof(float), (float *)dataIn, (float *)dataOut, 0);
       timer.stop();
@@ -887,13 +887,13 @@ bool bench_memcpy(int numElem) {
 
 void printDeviceInfo() {
   int deviceID;
-  cudaCheck(cudaGetDevice(&deviceID));
-  cudaDeviceProp prop;
-  cudaCheck(cudaGetDeviceProperties(&prop, deviceID));
-  cudaSharedMemConfig pConfig;
-  cudaCheck(cudaDeviceGetSharedMemConfig(&pConfig));
+  hipCheck(hipGetDevice(&deviceID));
+  hipDeviceProp_t prop;
+  hipCheck(hipGetDeviceProperties(&prop, deviceID));
+  hipSharedMemConfig pConfig;
+  hipCheck(hipDeviceGetSharedMemConfig(&pConfig));
   int shMemBankSize = 4;
-  if (pConfig == cudaSharedMemBankSizeEightByte) shMemBankSize = 8;
+  if (pConfig == hipSharedMemBankSizeEightByte) shMemBankSize = 8;
   double mem_BW = (double)(prop.memoryClockRate*2*(prop.memoryBusWidth/8))/1.0e6;
   printf("Using %s SM version %d.%d\n", prop.name, prop.major, prop.minor);
   printf("Clock %1.3lfGhz numSM %d ECC %d mem BW %1.2lfGB/s shMemBankSize %dB\n", (double)prop.clockRate/1e6,
