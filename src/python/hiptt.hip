@@ -13,8 +13,6 @@ namespace py = pybind11;
 
 namespace {
 
-static std::once_flag hipttInitialized;
-
 const char* hipttErrorString(hipttResult result)
 {
 	const char* hipttSuccess = "Success";
@@ -54,8 +52,6 @@ public :
 	hipTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
-		std::call_once(hipttInitialized, [](){ hipttInitialize(); });
-
 		// Defer hipttPlan to the first use, as we don't know the type yet.
 
 		py::object pyhip = py::module::import("pyhip");
@@ -81,8 +77,6 @@ public :
 		const py::object& idata, py::object& odata, const void* alpha = NULL, const void* beta = NULL) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
-		std::call_once(hipttInitialized, [](){ hipttInitialize(); });
-
 		py::object pyhip = py::module::import("pyhip");
 		py::object pygpuarray = pyhip.attr("gpuarray");
 		py::object pystream = pyhip.attr("driver").attr("Stream");

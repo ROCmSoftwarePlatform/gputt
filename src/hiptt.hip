@@ -338,8 +338,3 @@ hipttResult hipttExecute(hipttHandle handle, const void* idata, void* odata, con
   return CUTT_SUCCESS;
 }
 
-void hipttInitialize() {
-}
-
-void hipttFinalize() {
-}

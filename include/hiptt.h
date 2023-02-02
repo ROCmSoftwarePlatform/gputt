@@ -50,18 +50,6 @@ typedef enum CUTT_API hipttResult_t {
   CUTT_UNDEFINED_ERROR,    // Undefined error
 } hipttResult;
 
-// Initializes hipTT
-//
-// This is only needed for the Umpire allocator's lifetime management:
-// - if CUTT_HAS_UMPIRE is defined, will grab Umpire's allocator;
-// - otherwise this is a no-op
-void CUTT_API hipttInitialize();
-
-// Finalizes hipTT
-//
-// This is currently a no-op
-void CUTT_API hipttFinalize();
-
 //
 // Create plan
 //
