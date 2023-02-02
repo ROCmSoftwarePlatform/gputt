@@ -24,7 +24,6 @@ SOFTWARE.
 *******************************************************************************/
 
 #include "HipUtils.h"
-#include "HipMem.h"
 #include "hipttGpuModelKernel.h"
 
 #define RESTRICT //__restrict__
@@ -664,15 +663,15 @@ void runCounters(const int warpSize, const int* hostPosData, const int numPosDat
   const int numWarp = numPosData/warpSize;
 
   int* devPosData;
-  allocate_device<int>(&devPosData, numPosData);
+  hipCheck(hipMalloc(&devPosData, sizeof(int) * numPosData));
   copy_HtoD<int>(hostPosData, devPosData, numPosData);
 
   int* dev_tran;
   int* dev_cl_full;
   int* dev_cl_part;
-  allocate_device<int>(&dev_tran, numWarp);
-  allocate_device<int>(&dev_cl_full, numWarp);
-  allocate_device<int>(&dev_cl_part, numWarp);
+  hipCheck(hipMalloc(&dev_tran, sizeof(int) * numWarp));
+  hipCheck(hipMalloc(&dev_cl_full, sizeof(int) * numWarp));
+  hipCheck(hipMalloc(&dev_cl_part, sizeof(int) * numWarp));
 
   int nthread = 512;
   int nblock = (numPosData - 1)/nthread + 1;
@@ -685,11 +684,11 @@ void runCounters(const int warpSize, const int* hostPosData, const int numPosDat
   copy_DtoH<int>(dev_cl_part, host_cl_part, numWarp);
   hipCheck(hipDeviceSynchronize());
 
-  deallocate_device<int>(&dev_tran);
-  deallocate_device<int>(&dev_cl_full);
-  deallocate_device<int>(&dev_cl_part);
+  hipCheck(hipFree(dev_tran));
+  hipCheck(hipFree(dev_cl_full));
+  hipCheck(hipFree(dev_cl_part));
 
-  deallocate_device<int>(&devPosData);
+  hipCheck(hipFree(&devPosData));
 }
 
 bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheWidth,
@@ -700,7 +699,7 @@ bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheW
   TensorSplit& ts = plan.tensorSplit;
 
   MemStat* devMemStat;
-  allocate_device<MemStat>(&devMemStat, 1);
+  hipCheck(hipMalloc(&devMemStat, sizeof(MemStat)));
   set_device_array<MemStat>(devMemStat, 0, 1, plan.stream);
 
   switch(ts.method) {
@@ -775,7 +774,7 @@ bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheW
   MemStat hostMemStat;
   copy_DtoH<MemStat>(devMemStat, &hostMemStat, 1, plan.stream);
   hipCheck(hipDeviceSynchronize());
-  deallocate_device<MemStat>(&devMemStat);
+  hipCheck(hipFree(devMemStat));
 
   gld_tran   = hostMemStat.gld_tran;
   gst_tran   = hostMemStat.gst_tran;

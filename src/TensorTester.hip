@@ -27,7 +27,6 @@ SOFTWARE.
 // Testing utilities
 //
 #include "HipUtils.h"
-#include "HipMem.h"
 #include "TensorTester.h"
 
 #ifdef __HIP_PLATFORM_HCC__
@@ -109,9 +108,9 @@ __global__ void checkTransposeKernel(T* data, unsigned int ndata, int rank, Tens
 TensorTester::TensorTester() : maxRank(32), maxNumblock(256) {
   h_tensorConv = new TensorConv[maxRank];
   h_error      = new TensorError_t[maxNumblock];
-  allocate_device<TensorConv>(&d_tensorConv, maxRank);
-  allocate_device<TensorError_t>(&d_error, maxNumblock);
-  allocate_device<int>(&d_fail, 1);
+  hipCheck(hipMalloc(&d_tensorConv, sizeof(TensorConv) * maxRank));
+  hipCheck(hipMalloc(&d_error, sizeof(TensorError_t) * maxNumblock));
+  hipCheck(hipMalloc(&d_fail, sizeof(int)));
 }
 
 //
@@ -120,9 +119,9 @@ TensorTester::TensorTester() : maxRank(32), maxNumblock(256) {
 TensorTester::~TensorTester() {
   delete [] h_tensorConv;
   delete [] h_error;
-  deallocate_device<TensorConv>(&d_tensorConv);
-  deallocate_device<TensorError_t>(&d_error);
-  deallocate_device<int>(&d_fail);
+  hipCheck(hipFree(d_tensorConv));
+  hipCheck(hipFree(d_error));
+  hipCheck(hipFree(d_fail));
 }
 
 void TensorTester::setTensorCheckPattern(unsigned int* data, unsigned int ndata) {

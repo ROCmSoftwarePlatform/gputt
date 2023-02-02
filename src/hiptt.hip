@@ -25,7 +25,6 @@ SOFTWARE.
 #include <list>
 #include <unordered_map>
 #include "HipUtils.h"
-#include "HipMem.h"
 #include "hipttplan.h"
 #include "hipttkernel.h"
 #include "hipttTimer.h"

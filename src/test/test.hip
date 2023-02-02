@@ -29,7 +29,6 @@ SOFTWARE.
 #include <cmath>
 #include "hiptt.h"
 #include "HipUtils.h"
-#include "HipMem.h"
 #include "TensorTester.h"
 #include "hipttTimer.h"
 #include "hipttGpuModel.h"  // testCounters
@@ -93,8 +92,8 @@ int main(int argc, char *argv[]) {
   timerDouble = new hipttTimer(8);
 
   // Allocate device data, 100M elements
-  allocate_device<long long int>(&dataIn, dataSize);
-  allocate_device<long long int>(&dataOut, dataSize);
+  hipCheck(hipMalloc(&dataIn, sizeof(long long int) * dataSize));
+  hipCheck(hipMalloc(&dataOut, sizeof(long long int) * dataSize));
 
   // Create tester
   tester = new TensorTester();
@@ -119,8 +118,8 @@ int main(int argc, char *argv[]) {
     printf("test OK\n");
   }
 
-  deallocate_device<long long int>(&dataIn);
-  deallocate_device<long long int>(&dataOut);
+  hipCheck(hipFree(dataIn));
+  hipCheck(hipFree(dataOut));
   delete tester;
 
   delete timerFloat;

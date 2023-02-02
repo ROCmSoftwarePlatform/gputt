@@ -28,7 +28,6 @@ SOFTWARE.
 #include <cmath>
 #include <random>
 #include "HipUtils.h"
-#include "HipMem.h"
 #include "hipttplan.h"
 #include "hipttkernel.h"
 #include "hipttGpuModel.h"
@@ -1630,7 +1629,7 @@ void hipttPlan_t::activate() {
 
   if (tensorSplit.sizeMbar > 0) {
     if (Mbar == NULL) {
-      allocate_device<TensorConvInOut>(&Mbar, tensorSplit.sizeMbar);
+      hipCheck(hipMalloc(&Mbar, sizeof(TensorConvInOut) * tensorSplit.sizeMbar));
       copy_HtoD<TensorConvInOut>(hostMbar.data(), Mbar, tensorSplit.sizeMbar, stream);
     }
   }
@@ -1638,11 +1637,11 @@ void hipttPlan_t::activate() {
   if (tensorSplit.method == Packed || tensorSplit.method == PackedSplit) {
     int MmkSize = (tensorSplit.method == Packed) ? tensorSplit.sizeMmk : tensorSplit.sizeMmk*2;
     if (Mmk == NULL) {
-      allocate_device<TensorConvInOut>(&Mmk, MmkSize);
+      hipCheck(hipMalloc(&Mmk, sizeof(TensorConvInOut) * MmkSize));
       copy_HtoD<TensorConvInOut>(hostMmk.data(), Mmk, MmkSize, stream);
     }
     if (Msh == NULL) {
-      allocate_device<TensorConv>(&Msh, MmkSize);
+      hipCheck(hipMalloc(&Msh, sizeof(TensorConv) * MmkSize));
       copy_HtoD<TensorConv>(hostMsh.data(), Msh, MmkSize, stream);
     }
   }
@@ -1669,11 +1668,11 @@ hipttPlan_t::hipttPlan_t() {
 
 hipttPlan_t::~hipttPlan_t() {
   // Deallocate device buffers
-  if (Mbar != NULL) deallocate_device<TensorConvInOut>(&Mbar);
-  if (Mmk != NULL) deallocate_device<TensorConvInOut>(&Mmk);
-  if (Msh != NULL) deallocate_device<TensorConv>(&Msh);
-  if (Mk != NULL) deallocate_device<TensorConv>(&Mk);
-  if (Mm != NULL) deallocate_device<TensorConv>(&Mm);
+  if (Mbar != NULL) hipCheck(hipFree(Mbar));
+  if (Mmk != NULL) hipCheck(hipFree(Mmk));
+  if (Msh != NULL) hipCheck(hipFree(Msh));
+  if (Mk != NULL) hipCheck(hipFree(Mk));
+  if (Mm != NULL) hipCheck(hipFree(Mm));
 }
 
 void hipttPlan_t::setStream(hipStream_t stream_in) {

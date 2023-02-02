@@ -32,7 +32,6 @@ SOFTWARE.
 #include <random>
 #include "hiptt.h"
 #include "HipUtils.h"
-#include "HipMem.h"
 #include "TensorTester.h"
 #include "hipttTimer.h"
 #include "HipMemcpy.h"
@@ -170,8 +169,8 @@ int main(int argc, char *argv[]) {
   dataSize = (elemsize == 4) ? 420*MILLION : 370*MILLION;
 
   // Allocate device data, 100M elements
-  allocate_device<char>(&dataIn, dataSize*(size_t)elemsize);
-  allocate_device<char>(&dataOut, dataSize*(size_t)elemsize);
+  hipCheck(hipMalloc(&dataIn, sizeof(char) * dataSize * (size_t)elemsize));
+  hipCheck(hipMalloc(&dataOut, sizeof(char) * dataSize * (size_t)elemsize));
 
   // Create tester
   tester = new TensorTester();
@@ -356,8 +355,8 @@ benchOK:
 fail:
   printf("bench FAIL\n");
 end:
-  deallocate_device<char>(&dataIn);
-  deallocate_device<char>(&dataOut);
+  hipCheck(hipFree(dataIn));
+  hipCheck(hipFree(dataOut));
   delete tester;
 
   printf("seed %u\n", seed);
