@@ -1,25 +1,18 @@
-cuTT - CUDA Tensor Transpose
-============================
+# cuTT - CUDA Tensor Transpose
 
 cuTT is a high performance tensor transpose library for NVIDIA GPUs. It works with Kepler (SM 3.0) and above GPUs.
 
-Copyright (c) 2016 Antti-Pekka Hynninen
+This code implements the following tensor transposing methods: `Trivial`, `Tiled`, `TiledCopy`, `Packed`, and `PackedSplit`. The fastest method is chosen for the given problem, either by measuring the performance, or by using a heuristic (the default).
 
-Copyright (c) 2016 Oak Ridge National Laboratory (UT-Batelle)
+## Building
 
-Version 1.1
+Prerequisites:
 
-Installation
-============
-
-Software requirements:
- * C++ compiler with C++11 compitability
+ * C++ compiler with C++14 compitability
  * CUDA compiler
-
-Hardware requirements:
  * Kepler (SM 3.0) or above NVIDIA GPU
 
-To compile cuTT library as well as test cases and benchmarks, simply do
+To compile cuTT library as well as test cases and benchmarks, simply do:
 
 ```
 mkdir build
@@ -40,41 +33,41 @@ as well as the test and benchmarks
 
 In order to use cuTT, you only need the include `include/cutt.h` and the library `lib/libcutt.a` files.
 
-Running tests and benchmarks
-============================
+## Running tests and benchmarks
 
 Tests and benchmark executables are in the bin/ directory and they can be run without any options.
 Options to the test executable lets you choose the device ID on which to run:
 
+```
 cutt_test [options]
 Options:
 -device gpuid : use GPU with ID gpuid
+```
 
 For the benchmark executable, we have an additional option that lets you run the benchmarks using
 plans that are chosen optimally by measuring the performance of every possible implementation and
 choosing the best one.
 
+```
 cutt_bench [options]
 Options:
 -device gpuid : use GPU with ID gpuid
 -measure      : use cuttPlanMeasure (default is cuttPlan)
+```
 
-Performance
-===========
+## Performance
 
-cuTT was designed with performance as the main goal. Here are performance benchmarks for a random set of tensors with 200M `double` elements with ranks 2 to 7. The benchmarks were run with the measurement flag on
-(cutt_bench -measure)
+cuTT was designed with performance as the main goal. Here are performance benchmarks for a random set of tensors with 200M `double` elements with ranks 2 to 7. The benchmarks were run with the measurement flag on `./cutt_bench -measure -bench 3`.
 
-![k20x](https://raw.githubusercontent.com/ap-hynninen/cutt/master/doc/k20x_bench.png)
+![k20x](doc/k20x_bench.png)
 
-<!-- ![k40m](https://raw.githubusercontent.com/ap-hynninen/cutt/master/doc/bw_k40m_july1_2016.png)
+<!-- ![k40m](doc/bw_k40m_july1_2016.png)
  -->
 
-<!-- ![titanx](https://raw.githubusercontent.com/ap-hynninen/cutt/master/doc/bw_titanx.png)
+<!-- ![titanx](doc/bw_titanx.png)
  -->
 
-Usage
-=====
+## Usage
 
 cuTT uses a "plan structure" similar to FFTW and cuFFT libraries, where the
 user first creates a plan for the transpose and then executes that plan.
@@ -129,8 +122,7 @@ memory areas for correct operation. That is, cuTT only currently supports out-of
 transposes. Note that using Option 2 to create the plan can take up some time especially
 for high-rank tensors.
 
-cuTT API
-========
+## cuTT API
 
 ```c++
 //
@@ -196,17 +188,16 @@ cuttResult cuttDestroy(cuttHandle handle);
 cuttResult cuttExecute(cuttHandle handle, void* idata, void* odata);
 ```
 
-KNOWN BUGS
-==========
+## Known Bugs
+
  * Benchmarks sometime fail due to the stupid algorithm I have now to create
  random tensors with fixed volume.
 
-TODO
-====
+## TODO
+
  * Make "tiled" method work with sets of ranks (where ranks in M_m and M_k remain in same order)
 
-Licence
-=======
+## Licence
 
 MIT License
 
