@@ -1,15 +1,15 @@
-#include "cutt.h"
+#include "hiptt.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 
 namespace py = pybind11;
 
-extern "C" CUTT_API void cutt_init_python(void* parent, int submodule, const char* apikey);
+extern "C" CUTT_API void hiptt_init_python(void* parent, int submodule, const char* apikey);
 
-PYBIND11_MODULE(cutt, cutt)
+PYBIND11_MODULE(hiptt, hiptt)
 {
     // TODO Read the license file.
-    cutt_init_python(&cutt, 0 /* no submodule */, nullptr);
+    hiptt_init_python(&hiptt, 0 /* no submodule */, nullptr);
 }
 

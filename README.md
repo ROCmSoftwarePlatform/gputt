@@ -1,6 +1,6 @@
-# cuTT - CUDA Tensor Transpose
+# hipTT - CUDA Tensor Transpose
 
-cuTT is a high performance tensor transpose library for NVIDIA GPUs. It works with Kepler (SM 3.0) and above GPUs.
+hipTT is a high performance tensor transpose library for NVIDIA GPUs. It works with Kepler (SM 3.0) and above GPUs.
 
 This code implements the following tensor transposing methods: `Trivial`, `Tiled`, `TiledCopy`, `Packed`, and `PackedSplit`. The fastest method is chosen for the given problem, either by measuring the performance, or by using a heuristic (the default).
 
@@ -12,7 +12,7 @@ Prerequisites:
  * CUDA compiler
  * Kepler (SM 3.0) or above NVIDIA GPU
 
-To compile cuTT library as well as test cases and benchmarks, simply do:
+To compile hipTT library as well as test cases and benchmarks, simply do:
 
 ```
 mkdir build
@@ -23,15 +23,15 @@ make -j12
 
 This will create the library itself:
 
- * include/cutt.h
- * libcutt.a
+ * include/hiptt.h
+ * libhiptt.a
 
 as well as the test and benchmarks
 
- * cutt_test
- * cutt_bench
+ * hiptt_test
+ * hiptt_bench
 
-In order to use cuTT, you only need the include `include/cutt.h` and the library `lib/libcutt.a` files.
+In order to use hipTT, you only need the include `include/hiptt.h` and the library `lib/libhiptt.a` files.
 
 ## Running tests and benchmarks
 
@@ -39,7 +39,7 @@ Tests and benchmark executables are in the bin/ directory and they can be run wi
 Options to the test executable lets you choose the device ID on which to run:
 
 ```
-cutt_test [options]
+hiptt_test [options]
 Options:
 -device gpuid : use GPU with ID gpuid
 ```
@@ -49,15 +49,15 @@ plans that are chosen optimally by measuring the performance of every possible i
 choosing the best one.
 
 ```
-cutt_bench [options]
+hiptt_bench [options]
 Options:
 -device gpuid : use GPU with ID gpuid
--measure      : use cuttPlanMeasure (default is cuttPlan)
+-measure      : use hipttPlanMeasure (default is hipttPlan)
 ```
 
 ## Performance
 
-cuTT was designed with performance as the main goal. Here are performance benchmarks for a random set of tensors with 200M `double` elements with ranks 2 to 7. The benchmarks were run with the measurement flag on `./cutt_bench -measure -bench 3`.
+hipTT was designed with performance as the main goal. Here are performance benchmarks for a random set of tensors with 200M `double` elements with ranks 2 to 7. The benchmarks were run with the measurement flag on `./hiptt_bench -measure -bench 3`.
 
 ![k20x](doc/k20x_bench.png)
 
@@ -69,18 +69,18 @@ cuTT was designed with performance as the main goal. Here are performance benchm
 
 ## Usage
 
-cuTT uses a "plan structure" similar to FFTW and cuFFT libraries, where the
+hipTT uses a "plan structure" similar to FFTW and cuFFT libraries, where the
 user first creates a plan for the transpose and then executes that plan.
 Here is an example code.
 
 ```c++
-#include <cutt.h>
+#include <hiptt.h>
 
 //
-// Error checking wrapper for cutt
+// Error checking wrapper for hiptt
 //
-#define cuttCheck(stmt) do {                                 \
-  cuttResult err = stmt;                            \
+#define hipttCheck(stmt) do {                                 \
+  hipttResult err = stmt;                            \
   if (err != CUTT_SUCCESS) {                          \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
@@ -99,37 +99,37 @@ int main() {
   // double* odata : size product(dim)
 
   // Option 1: Create plan on NULL stream and choose implementation based on heuristics
-  cuttHandle plan;
-  cuttCheck(cuttPlan(&plan, 4, dim, permutation, sizeof(double), 0));
+  hipttHandle plan;
+  hipttCheck(hipttPlan(&plan, 4, dim, permutation, sizeof(double), 0));
 
   // Option 2: Create plan on NULL stream and choose implementation based on performance measurements
-  // cuttCheck(cuttPlanMeasure(&plan, 4, dim, permutation, sizeof(double), 0, idata, odata));
+  // hipttCheck(hipttPlanMeasure(&plan, 4, dim, permutation, sizeof(double), 0, idata, odata));
 
   // Execute plan
-  cuttCheck(cuttExecute(plan, idata, odata));
+  hipttCheck(hipttExecute(plan, idata, odata));
 
   ... do stuff with your output and deallocate data ...
 
   // Destroy plan
-  cuttCheck(cuttDestroy(plan));
+  hipttCheck(hipttDestroy(plan));
 
   return 0;
 }
 ```
 
 Input (idata) and output (odata) data are both in GPU memory and must point to different
-memory areas for correct operation. That is, cuTT only currently supports out-of-place
+memory areas for correct operation. That is, hipTT only currently supports out-of-place
 transposes. Note that using Option 2 to create the plan can take up some time especially
 for high-rank tensors.
 
-## cuTT API
+## hipTT API
 
 ```c++
 //
 // Create plan
 //
 // Parameters
-// handle            = Returned handle to cuTT plan
+// handle            = Returned handle to hipTT plan
 // rank              = Rank of the tensor
 // dim[rank]         = Dimensions of the tensor
 // permutation[rank] = Transpose permutation
@@ -139,14 +139,14 @@ for high-rank tensors.
 // Returns
 // Success/unsuccess code
 // 
-cuttResult cuttPlan(cuttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
+hipttResult hipttPlan(hipttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
   cudaStream_t stream);
 
 //
 // Create plan and choose implementation by measuring performance
 //
 // Parameters
-// handle            = Returned handle to cuTT plan
+// handle            = Returned handle to hipTT plan
 // rank              = Rank of the tensor
 // dim[rank]         = Dimensions of the tensor
 // permutation[rank] = Transpose permutation
@@ -158,25 +158,25 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, int* dim, int* permutation, si
 // Returns
 // Success/unsuccess code
 // 
-cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
+hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
   cudaStream_t stream, void* idata, void* odata);
   
 //
 // Destroy plan
 //
 // Parameters
-// handle            = Handle to the cuTT plan
+// handle            = Handle to the hipTT plan
 // 
 // Returns
 // Success/unsuccess code
 //
-cuttResult cuttDestroy(cuttHandle handle);
+hipttResult hipttDestroy(hipttHandle handle);
 
 //
 // Execute plan out-of-place
 //
 // Parameters
-// handle            = Returned handle to cuTT plan
+// handle            = Returned handle to hipTT plan
 // idata             = Input data size product(dim)
 // odata             = Output data size product(dim)
 // alpha             = scaling-factor for input
@@ -185,7 +185,7 @@ cuttResult cuttDestroy(cuttHandle handle);
 // Returns
 // Success/unsuccess code
 //
-cuttResult cuttExecute(cuttHandle handle, void* idata, void* odata);
+hipttResult hipttExecute(hipttHandle handle, void* idata, void* odata);
 ```
 
 ## Known Bugs

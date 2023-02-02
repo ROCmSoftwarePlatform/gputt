@@ -61,9 +61,9 @@ public:
 };
 
 //
-// Records timings for cuTT and gives out bandwidths and other data
+// Records timings for hipTT and gives out bandwidths and other data
 //
-class cuttTimer {
+class hipttTimer {
 private:
   // Size of the type we're measuring
   const int sizeofType;
@@ -99,8 +99,8 @@ private:
   std::unordered_map<int, Stat> stats;
 
 public:
-  cuttTimer(int sizeofType);
-  ~cuttTimer();
+  hipttTimer(int sizeofType);
+  ~hipttTimer();
   void start(std::vector<int>& dim, std::vector<int>& permutation);
   void stop();
   double seconds();

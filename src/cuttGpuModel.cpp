@@ -27,8 +27,8 @@ SOFTWARE.
 #include <random>
 #include <cuda_runtime.h>
 #include <cstring>               // memcpy
-#include "cuttGpuModel.h"
-#include "cuttGpuModelKernel.h"
+#include "hipttGpuModel.h"
+#include "hipttGpuModelKernel.h"
 #ifdef ENABLE_NVTOOLS
 #include "CudaUtils.h"
 #endif

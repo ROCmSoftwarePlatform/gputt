@@ -24,12 +24,12 @@ SOFTWARE.
 *******************************************************************************/
 #ifndef CUTTGPUMODELKERNEL_H
 #define CUTTGPUMODELKERNEL_H
-#include "cuttplan.h"
+#include "hipttplan.h"
 
 void runCounters(const int warpSize, const int* hostPosData, const int numPosData,
   const int accWidth, const int cacheWidth, int* host_tran, int* host_cl_full, int* host_cl_part);
 
-bool cuttGpuModelKernel(cuttPlan_t& plan, const int accWidth, const int cacheWidth,
+bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheWidth,
   int& gld_tran, int& gst_tran, int& gld_req, int& gst_req,
   int& cl_full_l2, int& cl_part_l2, int& cl_full_l1, int& cl_part_l1);
 

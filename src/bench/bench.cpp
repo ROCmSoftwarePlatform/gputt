@@ -30,11 +30,11 @@ SOFTWARE.
 #include <cmath>
 #include <cctype>
 #include <random>
-#include "cutt.h"
+#include "hiptt.h"
 #include "CudaUtils.h"
 #include "CudaMem.h"
 #include "TensorTester.h"
-#include "cuttTimer.h"
+#include "hipttTimer.h"
 #include "CudaMemcpy.h"
 #include "int_vector.h"
 
@@ -42,10 +42,10 @@ SOFTWARE.
 #define BILLION 1000000000
 
 //
-// Error checking wrapper for cutt
+// Error checking wrapper for hiptt
 //
-#define cuttCheck(stmt) do {                                 \
-  cuttResult err = stmt;                            \
+#define hipttCheck(stmt) do {                                 \
+  hipttResult err = stmt;                            \
   if (err != CUTT_SUCCESS) {                          \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
@@ -57,8 +57,8 @@ char* dataOut = NULL;
 size_t dataSize = 0;
 TensorTester* tester = NULL;
 
-cuttTimer* timer;
-bool use_cuttPlanMeasure;
+hipttTimer* timer;
+bool use_hipttPlanMeasure;
 bool use_plantimer;
 
 std::default_random_engine generator;
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
   unsigned seed = unsigned (std::time(0));
   bool arg_ok = true;
   int benchID = 0;
-  use_cuttPlanMeasure = false;
+  use_hipttPlanMeasure = false;
   use_plantimer = false;
   int elemsize = 8;
   std::vector<int> dimIn;
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
         sscanf(argv[i+1], "%d", &benchID);
         i += 2;
       } else if (strcmp(argv[i], "-measure") == 0) {
-        use_cuttPlanMeasure = true;
+        use_hipttPlanMeasure = true;
         i++;
       } else if (strcmp(argv[i], "-seed") == 0) {
         sscanf(argv[i+1], "%u", &seed);
@@ -138,10 +138,10 @@ int main(int argc, char *argv[]) {
   }
 
   if (!arg_ok) {
-    printf("cutt_bench [options]\n");
+    printf("hiptt_bench [options]\n");
     printf("Options:\n");
     printf("-device [int]    : GPU ID (default is 0)\n");
-    printf("-measure         : use cuttPlanMeasure (default is cuttPlan)\n");
+    printf("-measure         : use hipttPlanMeasure (default is hipttPlan)\n");
     printf("-plantimer       : planning is timed (default is no)\n");
     printf("-seed [int]      : seed value for random number generator (default is system timer)\n");
     printf("-elemsize [int]  : size of elements in bytes, 4 or 8. (default is 8)\n");
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
   printDeviceInfo();
   printf("CPU using vector type %s of length %d\n", INT_VECTOR_TYPE, INT_VECTOR_LEN);
 
-  timer = new cuttTimer(elemsize);
+  timer = new hipttTimer(elemsize);
 
   dataSize = (elemsize == 4) ? 420*MILLION : 370*MILLION;
 
@@ -792,15 +792,15 @@ bool bench_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
   printf("permutation\n");
   printVec(permutation);
 
-  cuttHandle plan;
+  hipttHandle plan;
   std::chrono::high_resolution_clock::time_point plan_start;
   if (use_plantimer) {
     plan_start = std::chrono::high_resolution_clock::now();
   }
-  if (use_cuttPlanMeasure) {
-    cuttCheck(cuttPlanMeasure(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0, dataIn, dataOut));
+  if (use_hipttPlanMeasure) {
+    hipttCheck(hipttPlanMeasure(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0, dataIn, dataOut));
   } else {
-    cuttCheck(cuttPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
+    hipttCheck(hipttPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
   }
   if (use_plantimer) {
     std::chrono::high_resolution_clock::time_point plan_end;
@@ -814,13 +814,13 @@ bool bench_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
     cudaCheck(cudaDeviceSynchronize());
 
     timer->start(dim, permutation);
-    cuttCheck(cuttExecute(plan, dataIn, dataOut));
+    hipttCheck(hipttExecute(plan, dataIn, dataOut));
     timer->stop();
 
     printf("wall time %lf ms %lf GB/s\n", timer->seconds()*1000.0, timer->GBs());
   }
 
-  cuttCheck(cuttDestroy(plan));
+  hipttCheck(hipttDestroy(plan));
   return tester->checkTranspose<T>(rank, dim.data(), permutation.data(), (T *)dataOut);
 }
 
@@ -841,7 +841,7 @@ bool bench_memcpy(int numElem) {
   std::vector<int> permutation(1, 0);
 
   {
-    cuttTimer timer(sizeof(T));
+    hipttTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
       cudaCheck(cudaDeviceSynchronize());
@@ -855,7 +855,7 @@ bool bench_memcpy(int numElem) {
   }
 
   {
-    cuttTimer timer(sizeof(T));
+    hipttTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
       cudaCheck(cudaDeviceSynchronize());
@@ -869,7 +869,7 @@ bool bench_memcpy(int numElem) {
   }
 
   {
-    cuttTimer timer(sizeof(T));
+    hipttTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
       cudaCheck(cudaDeviceSynchronize());

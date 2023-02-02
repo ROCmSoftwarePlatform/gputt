@@ -1,4 +1,4 @@
-import cutt
+import hiptt
 import numpy as np
 import pycuda.autoinit
 import pycuda.driver as cuda
@@ -19,10 +19,10 @@ if __name__ == '__main__':
 
     if option == 1:
         # Option 1: Create plan on NULL stream and choose implementation based on heuristics
-        plan = cutt.cuTT(4, dim, permutation, None)
+        plan = hiptt.hipTT(4, dim, permutation, None)
     else:
         # Option 2: Create plan on NULL stream and choose implementation based on performance measurements
-        plan = cutt.cuTT(4, dim, permutation, None, idata_gpu, odata_gpu)
+        plan = hiptt.hipTT(4, dim, permutation, None, idata_gpu, odata_gpu)
 
     # Execute plan
     result = plan.execute(idata_gpu, odata_gpu)

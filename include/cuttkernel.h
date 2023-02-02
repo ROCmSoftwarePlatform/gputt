@@ -24,13 +24,13 @@ SOFTWARE.
 *******************************************************************************/
 #ifndef CUTTKERNEL_H
 #define CUTTKERNEL_H
-#include "cuttplan.h"
+#include "hipttplan.h"
 
-void cuttKernelSetSharedMemConfig();
+void hipttKernelSetSharedMemConfig();
 
-int cuttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
+int hipttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
              const int deviceID, const cudaDeviceProp& prop, LaunchConfig& lc);
 
-bool cuttKernel(cuttPlan_t& plan, const void* dataIn, void* dataOut, const void* alpha, const void* beta);
+bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const void* alpha, const void* beta);
 
 #endif // CUTTKERNEL_H

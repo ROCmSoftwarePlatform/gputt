@@ -1,4 +1,4 @@
-#include "cutt.h"
+#include "hiptt.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -13,35 +13,35 @@ namespace py = pybind11;
 
 namespace {
 
-static std::once_flag cuttInitialized;
+static std::once_flag hipttInitialized;
 
-const char* cuttErrorString(cuttResult result)
+const char* hipttErrorString(hipttResult result)
 {
-	const char* cuttSuccess = "Success";
-	const char* cuttInvalidPlan = "Invalid plan handle";
-	const char* cuttInvalidParameter = "Invalid input parameter";
-	const char* cuttInvalidDevice = "Execution tried on device different than where plan was created";
-	const char* cuttInternalError = "Internal error";
-	const char* cuttUndefinedError = "Undefined error";
-	const char* cuttUnknownError = "Unknown error";
+	const char* hipttSuccess = "Success";
+	const char* hipttInvalidPlan = "Invalid plan handle";
+	const char* hipttInvalidParameter = "Invalid input parameter";
+	const char* hipttInvalidDevice = "Execution tried on device different than where plan was created";
+	const char* hipttInternalError = "Internal error";
+	const char* hipttUndefinedError = "Undefined error";
+	const char* hipttUnknownError = "Unknown error";
 
 	switch (result)
 	{
-	case CUTT_SUCCESS: return cuttSuccess;
-	case CUTT_INVALID_PLAN: return cuttInvalidPlan;
-	case CUTT_INVALID_PARAMETER: return cuttInvalidParameter;
-	case CUTT_INVALID_DEVICE: return cuttInvalidDevice;
-	case CUTT_INTERNAL_ERROR: return cuttInternalError;
-	case CUTT_UNDEFINED_ERROR: return cuttUndefinedError;
+	case CUTT_SUCCESS: return hipttSuccess;
+	case CUTT_INVALID_PLAN: return hipttInvalidPlan;
+	case CUTT_INVALID_PARAMETER: return hipttInvalidParameter;
+	case CUTT_INVALID_DEVICE: return hipttInvalidDevice;
+	case CUTT_INTERNAL_ERROR: return hipttInternalError;
+	case CUTT_UNDEFINED_ERROR: return hipttUndefinedError;
 	}
 
-	return cuttUnknownError;
+	return hipttUnknownError;
 }
 
-class cuTT
+class hipTT
 {
-	cuttHandle plan;
-	cuttResult initStatus;
+	hipttHandle plan;
+	hipttResult initStatus;
 	bool planInitialized = false;
 
 	int rank;
@@ -51,15 +51,15 @@ class cuTT
 
 public :
 
-	cuTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_) :
+	hipTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
 		// This is only needed for the Umpire allocator's lifetime management:
 		// - if CUTT_HAS_UMPIRE is defined, will grab Umpire's allocator;
 		// - otherwise this is a no-op
-		std::call_once(cuttInitialized, [](){ cuttInitialize(); });
+		std::call_once(hipttInitialized, [](){ hipttInitialize(); });
 
-		// Defer cuttPlan to the first use, as we don't know the type yet.
+		// Defer hipttPlan to the first use, as we don't know the type yet.
 
 		py::object pycuda = py::module::import("pycuda");
 		py::object pystream = pycuda.attr("driver").attr("Stream");
@@ -80,14 +80,14 @@ public :
 		}
 	}
 
-	cuTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_,
+	hipTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_,
 		const py::object& idata, py::object& odata, const void* alpha = NULL, const void* beta = NULL) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
 		// This is only needed for the Umpire allocator's lifetime management:
 		// - if CUTT_HAS_UMPIRE is defined, will grab Umpire's allocator;
 		// - otherwise this is a no-op
-		std::call_once(cuttInitialized, [](){ cuttInitialize(); });
+		std::call_once(hipttInitialized, [](){ hipttInitialize(); });
 
 		py::object pycuda = py::module::import("pycuda");
 		py::object pygpuarray = pycuda.attr("gpuarray");
@@ -132,15 +132,15 @@ public :
 		void* ogpuarray = reinterpret_cast<void*>(odata.attr("ptr").cast<intptr_t>());
 
 		size_t sizeofType = idata.attr("itemsize").cast<size_t>();
-		initStatus = cuttPlanMeasure(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
+		initStatus = hipttPlanMeasure(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
 			reinterpret_cast<const int*>(&permutation[0]), sizeofType, stream,
 			igpuarray, ogpuarray, alpha, beta);
 		planInitialized = true;
 	}
 
-	~cuTT()
+	~hipTT()
 	{
-		cuttDestroy(plan);
+		hipttDestroy(plan);
 	}
 
 	void execute(const py::object& idata, py::object& odata, const py::object& pyalpha, const py::object& pybeta)
@@ -183,7 +183,7 @@ public :
 		if (!planInitialized)
 		{
 			// Now we know the sizeofType, and can initialize the plan handle.
-			initStatus = cuttPlan(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
+			initStatus = hipttPlan(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
 				reinterpret_cast<const int*>(&permutation[0]), sizeofType, stream);
 			planInitialized = true;
 		}
@@ -191,8 +191,8 @@ public :
 		if (initStatus != CUTT_SUCCESS)
 		{
 			std::stringstream ss;
-			ss << "cuTT error: ";
-			ss << cuttErrorString(initStatus);
+			ss << "hipTT error: ";
+			ss << hipttErrorString(initStatus);
 			throw std::invalid_argument(ss.str());
 		}
 
@@ -208,12 +208,12 @@ public :
 			vbeta = pybeta.cast<double>();
 			beta = &vbeta;
 		}
-		cuttResult status = cuttExecute(plan, igpuarray, ogpuarray, alpha, beta);
+		hipttResult status = hipttExecute(plan, igpuarray, ogpuarray, alpha, beta);
 		if (status != CUTT_SUCCESS)
 		{
 			std::stringstream ss;
-			ss << "cuTT error: ";
-			ss << cuttErrorString(status);
+			ss << "hipTT error: ";
+			ss << hipttErrorString(status);
 			throw std::invalid_argument(ss.str());
 		}
 	}
@@ -221,19 +221,19 @@ public :
 
 } // namespace
 
-extern "C" CUTT_API void cutt_init_python(void* parent_, int submodule, const char* apikey)
+extern "C" CUTT_API void hiptt_init_python(void* parent_, int submodule, const char* apikey)
 {
 	if (!parent_) return;
 
 	py::module& parent = *reinterpret_cast<py::module*>(parent_);
-	py::module cutt = submodule ? parent.def_submodule("cutt") : parent;
+	py::module hiptt = submodule ? parent.def_submodule("hiptt") : parent;
 
-	py::class_<cuTT>(cutt, "cuTT")
+	py::class_<hipTT>(hiptt, "hipTT")
 		.def(py::init<int, const std::vector<int>&, const std::vector<int>&, const py::object&>(),
 R"doc(Create plan
 
 Parameters
-handle            = Returned handle to cuTT plan
+handle            = Returned handle to hipTT plan
 rank              = Rank of the tensor
 dim[rank]         = Dimensions of the tensor
 permutation[rank] = Transpose permutation
@@ -248,7 +248,7 @@ Success/unsuccess code)doc"
 R"doc(Create plan and choose implementation by measuring performance
 
 Parameters
-handle            = Returned handle to cuTT plan
+handle            = Returned handle to hipTT plan
 rank              = Rank of the tensor
 dim[rank]         = Dimensions of the tensor
 permutation[rank] = Transpose permutation
@@ -260,11 +260,11 @@ odata             = Output data size product(dim)
 Returns
 Success/unsuccess code)doc"
 		)
-		.def("execute", &cuTT::execute,
+		.def("execute", &hipTT::execute,
 R"doc(Execute plan out-of-place; performs a tensor transposition of the form \f[ \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha * \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta * \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
 
 Parameters
-handle            = Returned handle to cuTT plan
+handle            = Returned handle to hipTT plan
 idata             = Input data size product(dim)
 odata             = Output data size product(dim)
 alpha             = scalar for input

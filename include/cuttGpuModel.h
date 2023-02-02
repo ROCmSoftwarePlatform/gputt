@@ -26,8 +26,8 @@ SOFTWARE.
 #define CUTTGPUMODEL_H
 
 #include <vector>
-#include "cuttTypes.h"
-#include "cuttplan.h"
+#include "hipttTypes.h"
+#include "hipttplan.h"
 #include "int_vector.h"
 
 void computePos(const int vol0, const int vol1,

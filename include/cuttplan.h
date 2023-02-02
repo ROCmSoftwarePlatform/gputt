@@ -28,7 +28,7 @@ SOFTWARE.
 #include <list>
 #include <vector>
 #include <cuda.h>
-#include "cuttTypes.h"
+#include "hipttTypes.h"
 
 const int TILEDIM = 32;
 const int TILEROWS = 8;
@@ -115,7 +115,7 @@ public:
  };
 
 // Class that stores the plan data
-class cuttPlan_t {
+class hipttPlan_t {
 public:
   // Device for which this plan was made
   int deviceID;
@@ -177,8 +177,8 @@ public:
   // For TiledSingleOutRank
   TensorConv* Mm;
 
-  cuttPlan_t();
-  ~cuttPlan_t();
+  hipttPlan_t();
+  ~hipttPlan_t();
   void print();
   void setStream(cudaStream_t stream_in);
   bool countCycles(cudaDeviceProp& prop, const int numPosMbarSample=0);
@@ -187,23 +187,23 @@ public:
 
   static bool createPlans(const int rank, const int* dim, const int* permutation,
     const int redRank, const int* redDim, const int* redPermutation,
-    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<cuttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans);
 
 private:
   static bool createTrivialPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<cuttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans);
 
   static bool createTiledPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<cuttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans);
 
   static bool createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<cuttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans);
 
   static bool createPackedPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<cuttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans);
 
   static bool createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<cuttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const cudaDeviceProp& prop, std::list<hipttPlan_t>& plans);
 
   bool setup(const int rank_in, const int* dim, const int* permutation,
     const size_t sizeofType_in, const TensorSplit& tensorSplit_in,
@@ -211,11 +211,11 @@ private:
 
 };
 
-void printMatlab(cudaDeviceProp& prop, std::list<cuttPlan_t>& plans, std::vector<double>& times);
+void printMatlab(cudaDeviceProp& prop, std::list<hipttPlan_t>& plans, std::vector<double>& times);
 
 void reduceRanks(const int rank, const int* dim, const int* permutation,
   std::vector<int>& redDim, std::vector<int>& redPermutation);
 
-std::list<cuttPlan_t>::iterator choosePlanHeuristic(std::list<cuttPlan_t>& plans);
+std::list<hipttPlan_t>::iterator choosePlanHeuristic(std::list<hipttPlan_t>& plans);
 
 #endif // CUTTPLAN_H

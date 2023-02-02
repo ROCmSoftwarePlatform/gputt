@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include "cuttTimer.h"
+#include "hipttTimer.h"
 #include "CudaUtils.h"
 // #include <limits>       // std::numeric_limits
 #include <algorithm>
@@ -76,17 +76,17 @@ double Timer::seconds() {
 //
 // Class constructor
 //
-cuttTimer::cuttTimer(int sizeofType) : sizeofType(sizeofType) {}
+hipttTimer::hipttTimer(int sizeofType) : sizeofType(sizeofType) {}
 
 //
 // Class destructor
 //
-cuttTimer::~cuttTimer() {}
+hipttTimer::~hipttTimer() {}
 
 //
 // Start timer
 //
-void cuttTimer::start(std::vector<int>& dim, std::vector<int>& permutation) {
+void hipttTimer::start(std::vector<int>& dim, std::vector<int>& permutation) {
   curDim = dim;
   curPermutation = permutation;
   curBytes = sizeofType*2;   // "2x" because every element is read and also written out
@@ -100,7 +100,7 @@ void cuttTimer::start(std::vector<int>& dim, std::vector<int>& permutation) {
 //
 // Stop timer and record statistics
 //
-void cuttTimer::stop() {
+void hipttTimer::stop() {
   timer.stop();
   double bandwidth = GBs();
   auto it = stats.find(curDim.size());
@@ -124,14 +124,14 @@ void cuttTimer::stop() {
 //
 // Returns the duration of the last run in seconds
 //
-double cuttTimer::seconds() {
+double hipttTimer::seconds() {
   return timer.seconds();
 }
 
 //
 // Returns the bandwidth of the last run in GB/s
 //
-double cuttTimer::GBs() {
+double hipttTimer::GBs() {
   const double BILLION = 1000000000.0;
   double sec = seconds();
   return (sec == 0.0) ? 0.0 : (double)(curBytes)/(BILLION*sec);
@@ -140,7 +140,7 @@ double cuttTimer::GBs() {
 //
 // Returns the bandwidth of the last run in GiB/s
 //
-double cuttTimer::GiBs() {
+double hipttTimer::GiBs() {
   const double iBILLION = 1073741824.0;
   double sec = seconds();
   return (sec == 0.0) ? 0.0 : (double)(curBytes)/(iBILLION*sec);
@@ -149,7 +149,7 @@ double cuttTimer::GiBs() {
 //
 // Returns the best performing tensor transpose for rank
 //
-double cuttTimer::getBest(int rank) {
+double hipttTimer::getBest(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -159,7 +159,7 @@ double cuttTimer::getBest(int rank) {
 //
 // Returns the worst performing tensor transpose for rank
 //
-double cuttTimer::getWorst(int rank) {
+double hipttTimer::getWorst(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -169,7 +169,7 @@ double cuttTimer::getWorst(int rank) {
 //
 // Returns the worst performing tensor transpose for rank
 //
-double cuttTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& permutation) {
+double hipttTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& permutation) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -181,7 +181,7 @@ double cuttTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& pe
 //
 // Returns the median bandwidth for rank
 //
-double cuttTimer::getMedian(int rank) {
+double hipttTimer::getMedian(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -202,7 +202,7 @@ double cuttTimer::getMedian(int rank) {
 //
 // Returns the average bandwidth for rank
 //
-double cuttTimer::getAverage(int rank) {
+double hipttTimer::getAverage(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -212,7 +212,7 @@ double cuttTimer::getAverage(int rank) {
 //
 // Returns all data for rank
 //
-std::vector<double> cuttTimer::getData(int rank) {
+std::vector<double> hipttTimer::getData(int rank) {
   std::vector<double> res;
   auto it = stats.find(rank);
   if (it != stats.end()) {
@@ -225,7 +225,7 @@ std::vector<double> cuttTimer::getData(int rank) {
 //
 // Returns the worst performing tensor transpose of all
 //
-double cuttTimer::getWorst(std::vector<int>& dim, std::vector<int>& permutation) {
+double hipttTimer::getWorst(std::vector<int>& dim, std::vector<int>& permutation) {
   double worstBW = 1.0e20;
   int worstRank = 0;
   for (auto it=ranks.begin(); it != ranks.end(); it++) {

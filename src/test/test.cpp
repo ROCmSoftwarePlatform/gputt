@@ -27,26 +27,26 @@ SOFTWARE.
 #include <ctime>           // std::time
 #include <cstring>         // strcmp
 #include <cmath>
-#include "cutt.h"
+#include "hiptt.h"
 #include "CudaUtils.h"
 #include "CudaMem.h"
 #include "TensorTester.h"
-#include "cuttTimer.h"
-#include "cuttGpuModel.h"  // testCounters
+#include "hipttTimer.h"
+#include "hipttGpuModel.h"  // testCounters
 
 //
-// Error checking wrapper for cutt
+// Error checking wrapper for hiptt
 //
-#define cuttCheck(stmt) do {                                 \
-  cuttResult err = stmt;                            \
+#define hipttCheck(stmt) do {                                 \
+  hipttResult err = stmt;                            \
   if (err != CUTT_SUCCESS) {                          \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
   }                                                  \
 } while(0)
 
-cuttTimer* timerFloat;
-cuttTimer* timerDouble;
+hipttTimer* timerFloat;
+hipttTimer* timerDouble;
 
 long long int* dataIn  = NULL;
 long long int* dataOut = NULL;
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (!arg_ok) {
-    printf("cutt_test [options]\n");
+    printf("hiptt_test [options]\n");
     printf("Options:\n");
     printf("-device gpuid : use GPU with ID gpuid\n");
     return 1;
@@ -89,8 +89,8 @@ int main(int argc, char *argv[]) {
   cudaCheck(cudaDeviceReset());
   cudaCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte));
 
-  timerFloat = new cuttTimer(4);
-  timerDouble = new cuttTimer(8);
+  timerFloat = new hipttTimer(4);
+  timerDouble = new hipttTimer(8);
 
   // Allocate device data, 100M elements
   allocate_device<long long int>(&dataIn, dataSize);
@@ -380,11 +380,11 @@ bool test4() {
 
   cudaCheck(cudaDeviceSynchronize());
 
-  cuttHandle plans[numStream];
+  hipttHandle plans[numStream];
 
   for (int i=0;i < numStream;i++) {
-    cuttCheck(cuttPlan(&plans[i], dim.size(), dim.data(), permutation.data(), sizeof(double), streams[i]));
-    cuttCheck(cuttExecute(plans[i], dataIn, dataOut));
+    hipttCheck(hipttPlan(&plans[i], dim.size(), dim.data(), permutation.data(), sizeof(double), streams[i]));
+    hipttCheck(hipttExecute(plans[i], dataIn, dataOut));
   }
 
   cudaCheck(cudaDeviceSynchronize());
@@ -394,7 +394,7 @@ bool test4() {
   cudaCheck(cudaDeviceSynchronize());
 
   for (int i=0;i < numStream;i++) {
-    cuttCheck(cuttDestroy(plans[i]));
+    hipttCheck(hipttDestroy(plans[i]));
     cudaCheck(cudaStreamDestroy(streams[i]));
   }
 
@@ -452,23 +452,23 @@ bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
     return false;
   }
 
-  cuttTimer* timer;
+  hipttTimer* timer;
   if (sizeof(T) == 4) {
     timer = timerFloat;
   } else {
     timer = timerDouble;
   }
 
-  cuttHandle plan;
-  cuttCheck(cuttPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
+  hipttHandle plan;
+  hipttCheck(hipttPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
   set_device_array<T>((T *)dataOut, -1, vol);
   cudaCheck(cudaDeviceSynchronize());
 
   if (vol > 1000000) timer->start(dim, permutation);
-  cuttCheck(cuttExecute(plan, dataIn, dataOut));
+  hipttCheck(hipttExecute(plan, dataIn, dataOut));
   if (vol > 1000000) timer->stop();
 
-  cuttCheck(cuttDestroy(plan));
+  hipttCheck(hipttDestroy(plan));
 
   return tester->checkTranspose<T>(rank, dim.data(), permutation.data(), (T *)dataOut);
 }

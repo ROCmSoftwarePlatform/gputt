@@ -25,7 +25,7 @@ SOFTWARE.
 #include <cuda.h>
 #include "CudaUtils.h"
 #include "LRUCache.h"
-#include "cuttkernel.h"
+#include "hipttkernel.h"
 
 #define RESTRICT __restrict__
 
@@ -543,7 +543,7 @@ __global__ void transposeTiledCopy(
 //
 // Sets shared memory bank configuration for all kernels. Needs to be called once per device.
 //
-void cuttKernelSetSharedMemConfig() {  
+void hipttKernelSetSharedMemConfig() {  
 #define CALL(NREG) cudaCheck(cudaFuncSetSharedMemConfig(transposePacked<float, NREG, true>, cudaSharedMemBankSizeFourByte ))
 #include "calls.h"
 #undef CALL
@@ -684,7 +684,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
 // lc.shmemsize
 // lc.numRegStorage  (for Packed method)
 //
-int cuttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
+int hipttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
   const int deviceID, const cudaDeviceProp& prop, LaunchConfig& lc) {
 
   // Return value of numActiveBlock
@@ -859,7 +859,7 @@ int cuttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
   return numActiveBlockReturn;
 }
 
-bool cuttKernel(cuttPlan_t& plan, const void* dataIn, void* dataOut, const void* alphaPtr,
+bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const void* alphaPtr,
       const void* betaPtr) {
 
   LaunchConfig& lc = plan.launchConfig;
@@ -880,7 +880,7 @@ bool cuttKernel(cuttPlan_t& plan, const void* dataIn, void* dataOut, const void*
     case Trivial:
     {
       if( alpha != 1 || beta != 0 ){
-         printf("cuTT ERROR: this case still has to be implemented\n"); 
+         printf("hipTT ERROR: this case still has to be implemented\n"); 
          return false;
       }
       cudaCheck(cudaMemcpyAsync(dataOut, dataIn, ts.volMmk*ts.volMbar*plan.sizeofType,
@@ -909,7 +909,7 @@ bool cuttKernel(cuttPlan_t& plan, const void* dataIn, void* dataOut, const void*
          break
 #include "calls.h"
         default:
-        printf("cuttKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
+        printf("hipttKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
         return false;
 #undef CALL
 #undef CALL0
@@ -939,7 +939,7 @@ bool cuttKernel(cuttPlan_t& plan, const void* dataIn, void* dataOut, const void*
          break
 #include "calls.h"
         default:
-        printf("cuttKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
+        printf("hipttKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
         return false;
 #undef CALL
 #undef CALL0

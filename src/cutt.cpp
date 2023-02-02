@@ -27,10 +27,10 @@ SOFTWARE.
 #include <unordered_map>
 #include "CudaUtils.h"
 #include "CudaMem.h"
-#include "cuttplan.h"
-#include "cuttkernel.h"
-#include "cuttTimer.h"
-#include "cutt.h"
+#include "hipttplan.h"
+#include "hipttkernel.h"
+#include "hipttTimer.h"
+#include "hiptt.h"
 #include <atomic>
 #include <mutex>
 #include <cstdlib>
@@ -38,15 +38,15 @@ SOFTWARE.
 
 // global Umpire allocator
 #ifdef CUTT_HAS_UMPIRE
-umpire::Allocator cutt_umpire_allocator;
+umpire::Allocator hiptt_umpire_allocator;
 #endif
 
 // Hash table to store the plans
-static std::unordered_map<cuttHandle, cuttPlan_t* > planStorage;
+static std::unordered_map<hipttHandle, hipttPlan_t* > planStorage;
 static std::mutex planStorageMutex;
 
 // Current handle
-static std::atomic<cuttHandle> curHandle(0);
+static std::atomic<hipttHandle> curHandle(0);
 
 // Table of devices that have been initialized
 static std::unordered_map<int, cudaDeviceProp> deviceProps;
@@ -64,14 +64,14 @@ void getDeviceProp(int& deviceID, cudaDeviceProp &prop) {
   if (it == deviceProps.end()) {
     // Get device properties and store it for later use
     cudaCheck(cudaGetDeviceProperties(&prop, deviceID));
-    cuttKernelSetSharedMemConfig();
+    hipttKernelSetSharedMemConfig();
     deviceProps.insert({deviceID, prop});
   } else {
     prop = it->second;
   }
 }
 
-static cuttResult cuttPlanCheckInput(int rank, const int* dim, const int* permutation, size_t sizeofType) {
+static hipttResult hipttPlanCheckInput(int rank, const int* dim, const int* permutation, size_t sizeofType) {
   // Check sizeofType
   if (sizeofType != 4 && sizeofType != 8) return CUTT_INVALID_PARAMETER;
   // Check rank
@@ -96,7 +96,7 @@ static cuttResult cuttPlanCheckInput(int rank, const int* dim, const int* permut
   return CUTT_SUCCESS;
 }
 
-cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   cudaStream_t stream) {
 
 #ifdef ENABLE_NVTOOLS
@@ -104,7 +104,7 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* per
 #endif
 
   // Check that input parameters are valid
-  cuttResult inpCheck = cuttPlanCheckInput(rank, dim, permutation, sizeofType);
+  hipttResult inpCheck = hipttPlanCheckInput(rank, dim, permutation, sizeofType);
   if (inpCheck != CUTT_SUCCESS) return inpCheck;
 
   // Create new handle
@@ -128,7 +128,7 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* per
   reduceRanks(rank, dim, permutation, redDim, redPermutation);
 
   // Create plans from reduced ranks
-  std::list<cuttPlan_t> plans;
+  std::list<hipttPlan_t> plans;
   // if (rank != redDim.size()) {
   //   if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
   // }
@@ -137,7 +137,7 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* per
   // if (!createPlans(rank, dim, permutation, sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
 
 #if 0
-  if (!cuttKernelDatabase(deviceID, prop)) return CUTT_INTERNAL_ERROR;
+  if (!hipttKernelDatabase(deviceID, prop)) return CUTT_INTERNAL_ERROR;
 #endif
 
 #ifdef ENABLE_NVTOOLS
@@ -148,7 +148,7 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* per
   // std::chrono::high_resolution_clock::time_point plan_start;
   // plan_start = std::chrono::high_resolution_clock::now();
 
-  if (!cuttPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
+  if (!hipttPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
     sizeofType, deviceID, prop, plans)) return CUTT_INTERNAL_ERROR;
 
   // std::chrono::high_resolution_clock::time_point plan_end;
@@ -172,13 +172,13 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* per
 #endif
 
   // Choose the plan
-  std::list<cuttPlan_t>::iterator bestPlan = choosePlanHeuristic(plans);
+  std::list<hipttPlan_t>::iterator bestPlan = choosePlanHeuristic(plans);
   if (bestPlan == plans.end()) return CUTT_INTERNAL_ERROR;
 
   // bestPlan->print();
 
   // Create copy of the plan outside the list
-  cuttPlan_t* plan = new cuttPlan_t();
+  hipttPlan_t* plan = new hipttPlan_t();
   // NOTE: No deep copy needed here since device memory hasn't been allocated yet
   *plan = *bestPlan;
   // Set device pointers to NULL in the old copy of the plan so
@@ -204,11 +204,11 @@ cuttResult cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* per
   return CUTT_SUCCESS;
 }
 
-cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   cudaStream_t stream, const void* idata, void* odata, const void* alpha, const void *beta) {
 
   // Check that input parameters are valid
-  cuttResult inpCheck = cuttPlanCheckInput(rank, dim, permutation, sizeofType);
+  hipttResult inpCheck = hipttPlanCheckInput(rank, dim, permutation, sizeofType);
   if (inpCheck != CUTT_SUCCESS) return inpCheck;
 
   if (idata == odata) return CUTT_INVALID_PARAMETER;
@@ -234,7 +234,7 @@ cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const i
   reduceRanks(rank, dim, permutation, redDim, redPermutation);
 
   // Create plans from reduced ranks
-  std::list<cuttPlan_t> plans;
+  std::list<hipttPlan_t> plans;
 #if 0
   // if (rank != redDim.size()) {
     if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
@@ -243,7 +243,7 @@ cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const i
   // Create plans from non-reduced ranks
   // if (!createPlans(rank, dim, permutation, sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
 #else
-  if (!cuttPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
+  if (!hipttPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
     sizeofType, deviceID, prop, plans)) return CUTT_INTERNAL_ERROR;
 #endif
 
@@ -269,7 +269,7 @@ cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const i
     cudaCheck(cudaDeviceSynchronize());
     timer.start();
     // Execute plan
-    if (!cuttKernel(*it, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
+    if (!hipttKernel(*it, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
     timer.stop();
     double curTime = timer.seconds();
     // it->print();
@@ -289,7 +289,7 @@ cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const i
   // bestPlan->print();
 
   // Create copy of the plan outside the list
-  cuttPlan_t* plan = new cuttPlan_t();
+  hipttPlan_t* plan = new hipttPlan_t();
   *plan = *bestPlan;
   // Set device pointers to NULL in the old copy of the plan so
   // that they won't be deallocated later when the object is destroyed
@@ -310,25 +310,25 @@ cuttResult cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const i
   return CUTT_SUCCESS;
 }
 
-void CUDART_CB cuttDestroy_callback(cudaStream_t stream, cudaError_t status, void *userData){
-  cuttPlan_t* plan = (cuttPlan_t*) userData;
+void CUDART_CB hipttDestroy_callback(cudaStream_t stream, cudaError_t status, void *userData){
+  hipttPlan_t* plan = (hipttPlan_t*) userData;
   delete plan;
 }
 
-cuttResult cuttDestroy(cuttHandle handle) {
+hipttResult hipttDestroy(hipttHandle handle) {
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
   if (it == planStorage.end()) return CUTT_INVALID_PLAN;
 #ifdef CUTT_HAS_UMPIRE
-  // get the pointer cuttPlan_t
-  cuttPlan_t* plan = it->second;
+  // get the pointer hipttPlan_t
+  hipttPlan_t* plan = it->second;
   cudaStream_t stream = plan->stream;
   // Delete entry from plan storage
   planStorage.erase(it);
   // register callback to deallocate plan
-  cudaStreamAddCallback(stream, cuttDestroy_callback, plan, 0);
+  cudaStreamAddCallback(stream, hipttDestroy_callback, plan, 0);
 #else
-  // Delete instance of cuttPlan_t	 
+  // Delete instance of hipttPlan_t	 
   delete it->second;	  
   // Delete entry from plan storage	  
   planStorage.erase(it);
@@ -336,7 +336,7 @@ cuttResult cuttDestroy(cuttHandle handle) {
   return CUTT_SUCCESS;
 }
 
-cuttResult cuttExecute(cuttHandle handle, const void* idata, void* odata, const void* alpha, const void* beta) {
+hipttResult hipttExecute(hipttHandle handle, const void* idata, void* odata, const void* alpha, const void* beta) {
   // prevent modification when find
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
@@ -344,25 +344,25 @@ cuttResult cuttExecute(cuttHandle handle, const void* idata, void* odata, const 
 
   if (idata == odata) return CUTT_INVALID_PARAMETER;
 
-  cuttPlan_t& plan = *(it->second);
+  hipttPlan_t& plan = *(it->second);
 
   int deviceID;
   cudaCheck(cudaGetDevice(&deviceID));
   if (deviceID != plan.deviceID) return CUTT_INVALID_DEVICE;
 
-  if (!cuttKernel(plan, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
+  if (!hipttKernel(plan, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
   return CUTT_SUCCESS;
 }
 
-void cuttInitialize() {
+void hipttInitialize() {
 #ifdef CUTT_HAS_UMPIRE
   const char* alloc_env_var = std::getenv("CUTT_USES_THIS_UMPIRE_ALLOCATOR");
 #define __CUTT_STRINGIZE(x) #x
 #define __CUTT_XSTRINGIZE(x) __CUTT_STRINGIZE(x)
   const char* alloc_cstr = alloc_env_var ? alloc_env_var : __CUTT_XSTRINGIZE(CUTT_USES_THIS_UMPIRE_ALLOCATOR);
-  cutt_umpire_allocator = umpire::ResourceManager::getInstance().getAllocator(alloc_cstr);
+  hiptt_umpire_allocator = umpire::ResourceManager::getInstance().getAllocator(alloc_cstr);
 #endif
 }
 
-void cuttFinalize() {
+void hipttFinalize() {
 }

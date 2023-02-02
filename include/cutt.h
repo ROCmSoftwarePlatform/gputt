@@ -28,7 +28,7 @@ SOFTWARE.
 #include <cuda_runtime.h> // cudaStream_t
 
 #ifdef _WIN32
-#ifdef cutt_EXPORTS
+#ifdef hiptt_EXPORTS
 #define CUTT_API __declspec(dllexport)
 #else
 #define CUTT_API __declspec(dllimport)
@@ -37,36 +37,36 @@ SOFTWARE.
 #define CUTT_API
 #endif // _WIN32
 
-// Handle type that is used to store and access cutt plans
-typedef unsigned int cuttHandle;
+// Handle type that is used to store and access hiptt plans
+typedef unsigned int hipttHandle;
 
 // Return value
-typedef enum CUTT_API cuttResult_t {
+typedef enum CUTT_API hipttResult_t {
   CUTT_SUCCESS,            // Success
   CUTT_INVALID_PLAN,       // Invalid plan handle
   CUTT_INVALID_PARAMETER,  // Invalid input parameter
   CUTT_INVALID_DEVICE,     // Execution tried on device different than where plan was created
   CUTT_INTERNAL_ERROR,     // Internal error
   CUTT_UNDEFINED_ERROR,    // Undefined error
-} cuttResult;
+} hipttResult;
 
-// Initializes cuTT
+// Initializes hipTT
 //
 // This is only needed for the Umpire allocator's lifetime management:
 // - if CUTT_HAS_UMPIRE is defined, will grab Umpire's allocator;
 // - otherwise this is a no-op
-void CUTT_API cuttInitialize();
+void CUTT_API hipttInitialize();
 
-// Finalizes cuTT
+// Finalizes hipTT
 //
 // This is currently a no-op
-void CUTT_API cuttFinalize();
+void CUTT_API hipttFinalize();
 
 //
 // Create plan
 //
 // Parameters
-// handle            = Returned handle to cuTT plan
+// handle            = Returned handle to hipTT plan
 // rank              = Rank of the tensor
 // dim[rank]         = Dimensions of the tensor
 // permutation[rank] = Transpose permutation
@@ -76,14 +76,14 @@ void CUTT_API cuttFinalize();
 // Returns
 // Success/unsuccess code
 // 
-cuttResult CUTT_API cuttPlan(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+hipttResult CUTT_API hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   cudaStream_t stream);
 
 //
 // Create plan and choose implementation by measuring performance
 //
 // Parameters
-// handle            = Returned handle to cuTT plan
+// handle            = Returned handle to hipTT plan
 // rank              = Rank of the tensor
 // dim[rank]         = Dimensions of the tensor
 // permutation[rank] = Transpose permutation
@@ -95,25 +95,25 @@ cuttResult CUTT_API cuttPlan(cuttHandle* handle, int rank, const int* dim, const
 // Returns
 // Success/unsuccess code
 // 
-cuttResult CUTT_API cuttPlanMeasure(cuttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+hipttResult CUTT_API hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   cudaStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 //
 // Destroy plan
 //
 // Parameters
-// handle            = Handle to the cuTT plan
+// handle            = Handle to the hipTT plan
 // 
 // Returns
 // Success/unsuccess code
 //
-cuttResult CUTT_API cuttDestroy(cuttHandle handle);
+hipttResult CUTT_API hipttDestroy(hipttHandle handle);
 
 //
 // Execute plan out-of-place; performs a tensor transposition of the form \f[ \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha * \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta * \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
 //
 // Parameters
-// handle            = Returned handle to cuTT plan
+// handle            = Returned handle to hipTT plan
 // idata             = Input data size product(dim)
 // odata             = Output data size product(dim)
 // alpha             = scalar for input
@@ -122,7 +122,7 @@ cuttResult CUTT_API cuttDestroy(cuttHandle handle);
 // Returns
 // Success/unsuccess code
 //
-cuttResult CUTT_API cuttExecute(cuttHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
+hipttResult CUTT_API hipttExecute(hipttHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 #endif // CUTT_H
 
