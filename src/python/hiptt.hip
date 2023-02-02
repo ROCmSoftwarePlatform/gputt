@@ -54,9 +54,6 @@ public :
 	hipTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
-		// This is only needed for the Umpire allocator's lifetime management:
-		// - if CUTT_HAS_UMPIRE is defined, will grab Umpire's allocator;
-		// - otherwise this is a no-op
 		std::call_once(hipttInitialized, [](){ hipttInitialize(); });
 
 		// Defer hipttPlan to the first use, as we don't know the type yet.
@@ -84,9 +81,6 @@ public :
 		const py::object& idata, py::object& odata, const void* alpha = NULL, const void* beta = NULL) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
-		// This is only needed for the Umpire allocator's lifetime management:
-		// - if CUTT_HAS_UMPIRE is defined, will grab Umpire's allocator;
-		// - otherwise this is a no-op
 		std::call_once(hipttInitialized, [](){ hipttInitialize(); });
 
 		py::object pyhip = py::module::import("pyhip");

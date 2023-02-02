@@ -35,11 +35,6 @@ SOFTWARE.
 #include <cstdlib>
 // #include <chrono>
 
-// global Umpire allocator
-#ifdef CUTT_HAS_UMPIRE
-umpire::Allocator hiptt_umpire_allocator;
-#endif
-
 // Hash table to store the plans
 static std::unordered_map<hipttHandle, hipttPlan_t* > planStorage;
 static std::mutex planStorageMutex;
@@ -318,20 +313,10 @@ hipttResult hipttDestroy(hipttHandle handle) {
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
   if (it == planStorage.end()) return CUTT_INVALID_PLAN;
-#ifdef CUTT_HAS_UMPIRE
-  // get the pointer hipttPlan_t
-  hipttPlan_t* plan = it->second;
-  hipStream_t stream = plan->stream;
-  // Delete entry from plan storage
-  planStorage.erase(it);
-  // register callback to deallocate plan
-  hipStreamAddCallback(stream, hipttDestroy_callback, plan, 0);
-#else
   // Delete instance of hipttPlan_t	 
   delete it->second;	  
   // Delete entry from plan storage	  
   planStorage.erase(it);
-#endif
   return CUTT_SUCCESS;
 }
 
@@ -354,13 +339,6 @@ hipttResult hipttExecute(hipttHandle handle, const void* idata, void* odata, con
 }
 
 void hipttInitialize() {
-#ifdef CUTT_HAS_UMPIRE
-  const char* alloc_env_var = std::getenv("CUTT_USES_THIS_UMPIRE_ALLOCATOR");
-#define __CUTT_STRINGIZE(x) #x
-#define __CUTT_XSTRINGIZE(x) __CUTT_STRINGIZE(x)
-  const char* alloc_cstr = alloc_env_var ? alloc_env_var : __CUTT_XSTRINGIZE(CUTT_USES_THIS_UMPIRE_ALLOCATOR);
-  hiptt_umpire_allocator = umpire::ResourceManager::getInstance().getAllocator(alloc_cstr);
-#endif
 }
 
 void hipttFinalize() {

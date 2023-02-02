@@ -85,15 +85,6 @@ else()
     endif()
 endif()
 
-# ENABLE_UMPIRE
-if (ENABLE_UMPIRE)
-    find_package(umpire REQUIRED)
-    if (NOT CUTT_USES_THIS_UMPIRE_ALLOCATOR)
-        set(CUTT_USES_THIS_UMPIRE_ALLOCATOR "UM")
-    endif(NOT CUTT_USES_THIS_UMPIRE_ALLOCATOR)
-    message(STATUS "Will use Umpire allocator named \"${CUTT_USES_THIS_UMPIRE_ALLOCATOR}\"")
-endif ()
-
 file(GLOB CUTT_SOURCE_FILES "src/*.hip" "src/*.cpp" "include/*.h")
 
 add_library(${PROJECT_NAME} STATIC ${CUTT_SOURCE_FILES})
@@ -102,10 +93,6 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PROJECT_NAME} hip::amdhip64)
-if(ENABLE_UMPIRE)
-    target_link_libraries(${PROJECT_NAME} umpire)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC CUTT_HAS_UMPIRE CUTT_USES_THIS_UMPIRE_ALLOCATOR=${CUTT_USES_THIS_UMPIRE_ALLOCATOR})
-endif()
 
 add_executable(${PROJECT_NAME}_bench "src/bench/bench.hip")
 target_link_libraries(${PROJECT_NAME}_bench PUBLIC ${PROJECT_NAME})
