@@ -30,9 +30,9 @@ SOFTWARE.
 #define RESTRICT __restrict__
 
 #ifdef __HIP_PLATFORM_HCC__
-#define __ballot_sync(mask, pred) __ballot(pred)
-#define __shfl_sync __shfl
-#define __shfl_xor_sync __shfl_xor
+#define __ballot_sync(mask, ...) __ballot(__VA_ARGS__)
+#define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)
+#define __shfl_xor_sync(mask, ...) __shfl_xor(__VA_ARGS__)
 #endif
 
 //

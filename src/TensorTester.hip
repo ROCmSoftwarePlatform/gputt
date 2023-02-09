@@ -30,7 +30,7 @@ SOFTWARE.
 #include "TensorTester.h"
 
 #ifdef __HIP_PLATFORM_HCC__
-#define __shfl_sync __shfl
+#define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)
 #endif
 
 __global__ void setTensorCheckPatternKernel(unsigned int* data, unsigned int ndata) {
