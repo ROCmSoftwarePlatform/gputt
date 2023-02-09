@@ -844,7 +844,7 @@ double cyclesPacked(const bool isSplit, const size_t sizeofType, hipDeviceProp_t
   int gld_req, int gst_req, int gld_tran, int gst_tran,
   int sld_req, int sst_req, int sld_tran, int sst_tran, int num_iter, int cl_full, int cl_part) {
 
-  int warps_per_block = nthread/32;
+  int warps_per_block = nthread/prop.warpSize;
 
   GpuModelProp gpuModelProp(prop.major);
 
@@ -865,7 +865,7 @@ double cyclesTiled(const bool isCopy, const size_t sizeofType, hipDeviceProp_t& 
   int gld_req, int gst_req, int gld_tran, int gst_tran,
   int sld_req, int sst_req, int sld_tran, int sst_tran, int num_iter, int cl_full, int cl_part) {
 
-  int warps_per_block = nthread/32;
+  int warps_per_block = nthread/prop.warpSize;
 
   GpuModelProp gpuModelProp(prop.major);
 
