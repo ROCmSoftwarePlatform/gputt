@@ -904,16 +904,22 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
       (ts.volMmk, ts.volMbar, ts.sizeMmk, ts.sizeMbar, \
       plan.Mmk, plan.Mbar, plan.Msh, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
 #define CALL(ICASE) case ICASE: \
-         if (plan.sizeofType == 4) \
-            if (beta == 0) \
+         if (plan.sizeofType == 4) { \
+            if (beta == 0) { \
                CALL0(float,  ICASE, true); \
-            else \
+            } \
+            else { \
                CALL0(float,  ICASE, false); \
-         if (plan.sizeofType == 8) \
-            if (beta == 0) \
+            } \
+         } \
+         if (plan.sizeofType == 8) { \
+            if (beta == 0) { \
                CALL0(double, ICASE, true); \
-            else \
+            } \
+            else { \
                CALL0(double, ICASE, false); \
+            } \
+         } \
          break
 #include "calls.h"
         default:
@@ -934,16 +940,22 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
       (ts.splitDim, ts.volMmkUnsplit, ts. volMbar, ts.sizeMmk, ts.sizeMbar, \
         plan.cuDimMm, plan.cuDimMk, plan.Mmk, plan.Mbar, plan.Msh, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
 #define CALL(ICASE) case ICASE: \
-         if (plan.sizeofType == 4) \
-            if (beta == 0) \
+         if (plan.sizeofType == 4) { \
+            if (beta == 0) { \
                CALL0(float,  ICASE, true); \
-            else \
+            } \
+            else { \
                CALL0(float,  ICASE, false); \
-         if (plan.sizeofType == 8) \
-            if (beta == 0) \
+            } \
+         } \
+         if (plan.sizeofType == 8) { \
+            if (beta == 0) { \
                CALL0(double, ICASE, true); \
-            else \
+            } \
+            else { \
                CALL0(double, ICASE, false); \
+            } \
+         } \
          break
 #include "calls.h"
         default:
@@ -962,16 +974,22 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
       transposeTiled<TYPE, betaIsZero> <<< lc.numblock, lc.numthread, 0, plan.stream >>> \
       (((ts.volMm - 1)/TILEDIM + 1), ts.volMbar, ts.sizeMbar, plan.tiledVol, plan.cuDimMk, plan.cuDimMm, \
         plan.Mbar, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
-      if (plan.sizeofType == 4) 
-         if(beta == 0)
+      if (plan.sizeofType == 4) { 
+         if(beta == 0) { 
             CALL(float, true);
-         else
+         }
+         else {
             CALL(float, false);
-      if (plan.sizeofType == 8) 
-         if(beta == 0)
+         }
+      }
+      if (plan.sizeofType == 8) {
+         if(beta == 0) {
             CALL(double, true);
-         else
+         }
+         else {
             CALL(double, false);
+         }
+      }
 #undef CALL
     }
     break;
@@ -982,16 +1000,22 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
       transposeTiledCopy<TYPE, betaIsZero> <<< lc.numblock, lc.numthread, 0, plan.stream >>> \
       (((ts.volMm - 1)/TILEDIM + 1), ts.volMbar, ts.sizeMbar, plan.cuDimMk, plan.cuDimMm, plan.tiledVol, \
         plan.Mbar, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
-      if (plan.sizeofType == 4) 
-         if(beta == 0)
+      if (plan.sizeofType == 4) { 
+         if(beta == 0) {
             CALL(float, true);
-         else
+         }
+         else {
             CALL(float, false);
-      if (plan.sizeofType == 8) 
-         if(beta == 0)
+         }
+      }
+      if (plan.sizeofType == 8) { 
+         if(beta == 0) {
             CALL(double, true);
-         else
+         }
+         else {
             CALL(double, false);
+         }
+      }
 #undef CALL
     }
     break;
