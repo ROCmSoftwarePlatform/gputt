@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
-project(hiptt)
+project(hiptt CXX)
 
 if ("x" STREQUAL "x${CMAKE_BUILD_TYPE}")
 set(CMAKE_BUILD_TYPE Release)
@@ -15,16 +15,6 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 endif()
 endif()
 
-# enable CXX
-enable_language(CXX)
-if (NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 14)
-endif (NOT CMAKE_CXX_STANDARD)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if (NOT CMAKE_CXX_EXTENSIONS)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-endif (NOT CMAKE_CXX_EXTENSIONS)
-
 # enable HIP
 enable_language(HIP)
 
@@ -37,17 +27,6 @@ if(NOT DEFINED HIP_PATH)
 endif()
 set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
 find_package(hip REQUIRED)
-
-if (NOT CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-endif (NOT CMAKE_CUDA_STANDARD)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-if (NOT CMAKE_CUDA_EXTENSIONS)
-    set(CMAKE_CUDA_EXTENSIONS OFF)
-endif (NOT CMAKE_CUDA_EXTENSIONS)
-
-message(STATUS "CUDA Include Dirs: " ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-message(STATUS "CUDA Host Compiler: " ${CMAKE_CUDA_HOST_COMPILER})
 
 if ("x${Python3_VERSION}" STREQUAL "x")
 find_package(Python3 COMPONENTS Interpreter Development)
@@ -72,7 +51,7 @@ if(ENABLE_NVTOOLS)
     link_libraries(-lnvToolsExt)
 endif()
 
-message(STATUS "Current CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodeview" ${CMAKE_HIP_FLAGS})
 
 # ENABLE_NO_ALIGNED_ALLOC
 if(ENABLE_NO_ALIGNED_ALLOC)
@@ -88,6 +67,7 @@ endif()
 file(GLOB CUTT_SOURCE_FILES "src/*.hip" "src/*.cpp" "include/*.h")
 
 add_library(${PROJECT_NAME} STATIC ${CUTT_SOURCE_FILES})
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
@@ -95,9 +75,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/i
 target_link_libraries(${PROJECT_NAME} hip::amdhip64)
 
 add_executable(${PROJECT_NAME}_bench "src/bench/bench.hip")
+target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_14)
 target_link_libraries(${PROJECT_NAME}_bench PUBLIC ${PROJECT_NAME})
 
 add_executable(${PROJECT_NAME}_test "src/test/test.hip")
+target_compile_features(${PROJECT_NAME}_test PUBLIC cxx_std_14)
 target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME})
 
 pybind11_add_module(${PROJECT_NAME}_python "src/python/${PROJECT_NAME}.hip" "src/python/${PROJECT_NAME}_module.hip")
