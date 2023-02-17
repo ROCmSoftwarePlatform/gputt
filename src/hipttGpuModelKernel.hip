@@ -34,6 +34,8 @@ SOFTWARE.
 #define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)
 #define __shfl_down_sync(mask, ...) __shfl_down(__VA_ARGS__)
 #define __shfl_xor_sync(mask, ...) __shfl_xor(__VA_ARGS__)
+#define __popc(...) __popcll(__VA_ARGS__)
+#define __ffs(...) __ffsll(__VA_ARGS__)
 #endif
 
 //
@@ -196,7 +198,7 @@ __global__ void runCountersKernel(const int* posData, const int numPosData,
   for (int i=threadIdx.x + blockIdx.x*blockDim.x;i < numPosData;i+=blockDim.x*gridDim.x) {
     int pos = posData[i];
     int flag = (pos == -1);
-    int ffsval = __ffs(static_cast<int>(__ballot_sync(0xffffffff,flag))) - 1;
+    int ffsval = __ffs(__ballot_sync(0xffffffff,flag)) - 1;
     int n = (__any_sync(0xffffffff,flag)) ? ffsval : warpSize;
     int tran = countGlTransactions(pos, n, accWidth, warpLane);
     int cl_full = 0;
