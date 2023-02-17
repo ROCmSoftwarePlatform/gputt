@@ -29,7 +29,11 @@ SOFTWARE.
 #include <vector>
 #include "hipttTypes.h"
 
+#ifdef __HIP_PLATFORM_HCC__
+const int TILEDIM = 64;
+#else
 const int TILEDIM = 32;
+#endif
 const int TILEROWS = 8;
 
 // Transposing methods
