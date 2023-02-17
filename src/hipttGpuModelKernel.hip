@@ -690,7 +690,7 @@ void runCounters(const int warpSize, const int* hostPosData, const int numPosDat
   hipCheck(hipFree(dev_cl_full));
   hipCheck(hipFree(dev_cl_part));
 
-  hipCheck(hipFree(&devPosData));
+  hipCheck(hipFree(devPosData));
 }
 
 bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheWidth,
