@@ -281,8 +281,8 @@ countTiled(
   const int xout = bx + threadIdx.y;
   const int yout = by + threadIdx.x;
 
-  const unsigned int maskIny = __ballot_sync(0xffffffff,(yin + warpLane < tiledVol.y))*(xin < tiledVol.x);
-  const unsigned int maskOutx = __ballot_sync(0xffffffff,(xout + warpLane < tiledVol.x))*(yout < tiledVol.y);
+  const auto maskIny = __ballot_sync(0xffffffff,(yin + warpLane < tiledVol.y))*(xin < tiledVol.x);
+  const auto maskOutx = __ballot_sync(0xffffffff,(xout + warpLane < tiledVol.x))*(yout < tiledVol.y);
 
   const int posMinorIn = xin + yin*cuDimMk;
   const int posMinorOut = yout + xout*cuDimMm;
@@ -309,7 +309,7 @@ countTiled(
     // Read data into shared memory tile
 #pragma unroll
     for (int j=0;j < TILEDIM;j += TILEROWS) {
-      int n = __popc(__ballot_sync(0xffffffff,maskIny & (1 << j)));
+      int n = __popc(__ballot_sync(0xffffffff,maskIny & (static_cast<decltype(maskIny)>(1) << j)));
       memStat.gld_tran += countGlTransactions(posIn, n, accWidth, warpLane);
       memStat.gld_req += __any_sync(0xffffffff,n > 0);
       posIn += posInAdd;
@@ -317,7 +317,7 @@ countTiled(
 
 #pragma unroll
     for (int j=0;j < TILEDIM;j += TILEROWS) {
-      int n = __popc(__ballot_sync(0xffffffff,maskOutx & (1 << j)));
+      int n = __popc(__ballot_sync(0xffffffff,maskOutx & (static_cast<decltype(maskOutx)>(1) << j)));
       memStat.gst_tran += countGlTransactions(posOut, n, accWidth, warpLane);
       memStat.gst_req += __any_sync(0xffffffff,n > 0);
       countCacheLines(posOut, n, cacheWidth, warpLane, memStat.cl_full_l2, memStat.cl_part_l2);

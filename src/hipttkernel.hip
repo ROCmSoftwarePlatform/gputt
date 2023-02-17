@@ -72,8 +72,8 @@ __global__ void transposeTiled(
   const int xout = bx + threadIdx.y;
   const int yout = by + threadIdx.x;
 
-  const unsigned int maskIny = __ballot_sync(0xffffffff,(yin + warpLane < tiledVol.y))*(xin < tiledVol.x);
-  const unsigned int maskOutx = __ballot_sync(0xffffffff,(xout + warpLane < tiledVol.x))*(yout < tiledVol.y);
+  const auto maskIny = __ballot_sync(0xffffffff,(yin + warpLane < tiledVol.y))*(xin < tiledVol.x);
+  const auto maskOutx = __ballot_sync(0xffffffff,(xout + warpLane < tiledVol.x))*(yout < tiledVol.y);
 
   const int posMinorIn = xin + yin*cuDimMk;
   const int posMinorOut = yout + xout*cuDimMm;
@@ -102,7 +102,7 @@ __global__ void transposeTiled(
     for (int j=0;j < TILEDIM;j += TILEROWS) {
       // int pos = posIn + j*cuDimMk;
       // if (xin < readVol.x && yin + j < readVol.y) {
-      if ((maskIny & (1 << j)) != 0) {
+      if ((maskIny & (static_cast<decltype(maskIny)>(1) << j)) != 0) {
         shTile[threadIdx.y + j][threadIdx.x] = dataIn[posIn];
       }
       posIn += posInAdd;
@@ -115,7 +115,7 @@ __global__ void transposeTiled(
     for (int j=0;j < TILEDIM;j += TILEROWS) {
       // int pos = posOut + j*cuDimMm;
       // if (xout + j < readVol.x && yout < readVol.y) {
-      if ((maskOutx & (1 << j)) != 0 ) {
+      if ((maskOutx & (static_cast<decltype(maskOutx)>(1) << j)) != 0) {
         if( betaIsZero )
            dataOut[posOut] = alpha * shTile[threadIdx.x][threadIdx.y + j];
         else
@@ -404,7 +404,7 @@ __global__ void transposeTiledCopy(
   const int x = bx + threadIdx.x;
   const int y = by + threadIdx.y;
 
-  const unsigned int mask = __ballot_sync(0xffffffff,(y + warpLane < tiledVol.y))*(x < tiledVol.x);
+  const auto mask = __ballot_sync(0xffffffff,(y + warpLane < tiledVol.y))*(x < tiledVol.x);
 
   const int posMinorIn = x + y*cuDimMk;
   const int posMinorOut = x + y*cuDimMm;
@@ -432,7 +432,7 @@ __global__ void transposeTiledCopy(
 #pragma unroll
     for (int j=0;j < TILEDIM;j += TILEROWS) {
       // if ((x < tiledVol.x) && (y + j < tiledVol.y)) {
-      if ((mask & (1 << j)) != 0) {
+      if ((mask & (static_cast<decltype(mask)>(1) << j)) != 0) {
         val[j/TILEROWS] = dataIn[posIn];
       }
       posIn += posInAdd;
@@ -442,7 +442,7 @@ __global__ void transposeTiledCopy(
 #pragma unroll
     for (int j=0;j < TILEDIM;j += TILEROWS) {
       // if ((x < tiledVol.x) && (y + j < tiledVol.y)) {
-      if ((mask & (1 << j)) != 0) {
+      if ((mask & (static_cast<decltype(mask)>(1) << j)) != 0) {
         if(betaIsZero)
            dataOut[posOut] = alpha * val[j/TILEROWS];
         else
