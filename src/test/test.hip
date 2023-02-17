@@ -104,7 +104,10 @@ int main(int argc, char *argv[]) {
   if(passed){passed = test2(); if(!passed) printf("Test 2 failed\n");}
   if(passed){passed = test3(); if(!passed) printf("Test 3 failed\n");}
   //if(passed){passed = test4(); if(!passed) printf("Test 4 failed\n");}
+#ifndef __HIP_PLATFORM_HCC__
+  // Test is specific to warpSize=32
   if(passed){passed = test5(); if(!passed) printf("Test 5 failed\n");}
+#endif
 
   if(passed){
     std::vector<int> worstDim;
