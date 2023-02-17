@@ -1067,8 +1067,8 @@ bool hipttPlan_t::countCycles(hipDeviceProp_t& prop, const int numPosMbarSample)
   // Number of elements that are loaded per memory transaction:
   // 128 bytes per transaction
   const int accWidth = 128/sizeofType;
-  // L2 cache line width is 32 bytes
-  const int cacheWidth = 32/sizeofType;
+  // L2 cache line width (assumed)
+  const int cacheWidth = prop.warpSize/sizeofType;
 
   if (tensorSplit.method == Tiled) {
     // Global memory
