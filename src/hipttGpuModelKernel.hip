@@ -223,7 +223,7 @@ __global__ void runCountersKernel(const int* posData, const int numPosData,
 //
 __device__ __forceinline__
 void writeMemStat(const int warpLane, MemStat memStat, MemStat* RESTRICT glMemStat) {
-  for (int i=16;i >= 1;i/=2) {
+  for (int i=warpSize/2;i >= 1;i/=2) {
     // memStat.gld_tran += __shfl_xor_sync(0xffffffff,memStat.gld_tran,i);
     // memStat.gst_tran += __shfl_xor_sync(0xffffffff,memStat.gst_tran,i);
     // memStat.gld_req  += __shfl_xor_sync(0xffffffff,memStat.gld_req,i);
@@ -299,7 +299,7 @@ countTiled(
     int posMajorIn = ((posMbar/Mbar.c_in) % Mbar.d_in)*Mbar.ct_in;
     int posMajorOut = ((posMbar/Mbar.c_out) % Mbar.d_out)*Mbar.ct_out;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMajorIn += __shfl_xor_sync(0xffffffff,posMajorIn,i);
       posMajorOut += __shfl_xor_sync(0xffffffff,posMajorOut,i);
     }
@@ -394,13 +394,13 @@ countPacked(
 
     int posMbarOut = ((posMbar/Mbar.c_out) % Mbar.d_out)*Mbar.ct_out;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarOut += __shfl_xor_sync(0xffffffff,posMbarOut,i);
     }
 
     int posMbarIn = ((posMbar/Mbar.c_in) % Mbar.d_in)*Mbar.ct_in;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarIn += __shfl_xor_sync(0xffffffff,posMbarIn,i);
     }
 
@@ -528,13 +528,13 @@ countPackedSplit(
 
     int posMbarOut = ((posMbar/Mbar.c_out) % Mbar.d_out)*Mbar.ct_out;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarOut += __shfl_xor_sync(0xffffffff,posMbarOut,i);
     }
 
     int posMbarIn = ((posMbar/Mbar.c_in) % Mbar.d_in)*Mbar.ct_in;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarIn += __shfl_xor_sync(0xffffffff,posMbarIn,i);
     }
 

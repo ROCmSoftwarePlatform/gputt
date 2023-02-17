@@ -87,7 +87,7 @@ __global__ void transposeTiled(
     int posMajorIn = ((posMbar/Mbar.c_in) % Mbar.d_in)*Mbar.ct_in;
     int posMajorOut = ((posMbar/Mbar.c_out) % Mbar.d_out)*Mbar.ct_out;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMajorIn += __shfl_xor_sync(0xffffffff,posMajorIn,i);
       posMajorOut += __shfl_xor_sync(0xffffffff,posMajorOut,i);
     }
@@ -199,13 +199,13 @@ __global__ void transposePacked(
 
     int posMbarOut = ((posMbar/Mbar.c_out) % Mbar.d_out)*Mbar.ct_out;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarOut += __shfl_xor_sync(0xffffffff,posMbarOut,i);
     }
 
     int posMbarIn = ((posMbar/Mbar.c_in) % Mbar.d_in)*Mbar.ct_in;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarIn += __shfl_xor_sync(0xffffffff,posMbarIn,i);
     }
 
@@ -332,13 +332,13 @@ __global__ void transposePackedSplit(
 
     int posMbarOut = ((posMbar/Mbar.c_out) % Mbar.d_out)*Mbar.ct_out;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarOut += __shfl_xor_sync(0xffffffff,posMbarOut,i);
     }
 
     int posMbarIn = ((posMbar/Mbar.c_in) % Mbar.d_in)*Mbar.ct_in;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMbarIn += __shfl_xor_sync(0xffffffff,posMbarIn,i);
     }
 
@@ -418,7 +418,7 @@ __global__ void transposeTiledCopy(
     int posMajorIn = ((posMbar/Mbar.c_in) % Mbar.d_in)*Mbar.ct_in;
     int posMajorOut = ((posMbar/Mbar.c_out) % Mbar.d_out)*Mbar.ct_out;
 #pragma unroll
-    for (int i=16;i >= 1;i/=2) {
+    for (int i=warpSize/2;i >= 1;i/=2) {
       posMajorIn += __shfl_xor_sync(0xffffffff,posMajorIn,i);
       posMajorOut += __shfl_xor_sync(0xffffffff,posMajorOut,i);
     }
