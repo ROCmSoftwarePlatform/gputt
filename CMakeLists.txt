@@ -15,6 +15,27 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 endif()
 endif()
 
+option(ENABLE_NVTOOLS "Enable nvvp profiling of CPU code" OFF)
+option(ENABLE_NO_ALIGNED_ALLOC "Enable aligned_alloc() function implemented in hipTT" OFF)
+
+if ("x${Python3_VERSION}" STREQUAL "x")
+find_package(Python3 COMPONENTS Interpreter Development)
+else()
+find_package(Python3 ${Python3_VERSION} EXACT COMPONENTS Interpreter Development)
+endif()
+set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
+
+set(PYBIND11_PYTHON_VERSION ${Python3_VERSION})
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/pybind11)
+
+file(GLOB ${PROJECT_NAME}_SOURCE_FILES "src/*.cu" "include/*.h")
+
+check_language(HIP)
+check_language(CUDA)
+
+if(CMAKE_HIP_COMPILER)
+
 # enable HIP
 enable_language(HIP)
 
@@ -28,21 +49,19 @@ endif()
 set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
 find_package(hip REQUIRED)
 
-if ("x${Python3_VERSION}" STREQUAL "x")
-find_package(Python3 COMPONENTS Interpreter Development)
+set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodeview" ${CMAKE_HIP_FLAGS})
+
+set_source_files_properties(${${PROJECT_NAME}_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
+
+elseif(CMAKE_CUDA_COMPILER)
+
+set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -O0" ${CMAKE_CUDA_FLAGS})
+
 else()
-find_package(Python3 ${Python3_VERSION} EXACT COMPONENTS Interpreter Development)
+
+message(FATAL_ERROR "CUDA or HIP backend must be available, aborting")
+
 endif()
-set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
-
-set(PYBIND11_PYTHON_VERSION ${Python3_VERSION})
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/pybind11)
-
-option(ENABLE_NVTOOLS "Enable nvvp profiling of CPU code" OFF)
-option(ENABLE_NO_ALIGNED_ALLOC "Enable aligned_alloc() function implemented in hipTT" OFF)
-option(ENABLE_UMPIRE "Enable umpire for memory management" OFF)
-include(CheckFunctionExists)
 
 # ENABLE_NVTOOLS
 if(ENABLE_NVTOOLS)
@@ -50,8 +69,6 @@ if(ENABLE_NVTOOLS)
     list(APPEND CUDA_NVCC_FLAGS -lnvToolsExt)
     link_libraries(-lnvToolsExt)
 endif()
-
-set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodeview" ${CMAKE_HIP_FLAGS})
 
 # ENABLE_NO_ALIGNED_ALLOC
 if(ENABLE_NO_ALIGNED_ALLOC)
@@ -64,9 +81,7 @@ else()
     endif()
 endif()
 
-file(GLOB CUTT_SOURCE_FILES "src/*.hip" "src/*.cpp" "include/*.h")
-
-add_library(${PROJECT_NAME} STATIC ${CUTT_SOURCE_FILES})
+add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCE_FILES})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
@@ -74,15 +89,15 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_D
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PROJECT_NAME} hip::amdhip64)
 
-add_executable(${PROJECT_NAME}_bench "src/bench/bench.hip")
+add_executable(${PROJECT_NAME}_bench "src/bench/bench.cu")
 target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_14)
 target_link_libraries(${PROJECT_NAME}_bench PUBLIC ${PROJECT_NAME})
 
-add_executable(${PROJECT_NAME}_test "src/test/test.hip")
+add_executable(${PROJECT_NAME}_test "src/test/test.cu")
 target_compile_features(${PROJECT_NAME}_test PUBLIC cxx_std_14)
 target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME})
 
-pybind11_add_module(${PROJECT_NAME}_python "src/python/${PROJECT_NAME}.hip" "src/python/${PROJECT_NAME}_module.hip")
+pybind11_add_module(${PROJECT_NAME}_python "src/python/${PROJECT_NAME}.cu" "src/python/${PROJECT_NAME}_module.cu")
 target_include_directories(${PROJECT_NAME}_python PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_include_directories(${PROJECT_NAME}_python PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_compile_definitions(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME}_EXPORTS)
