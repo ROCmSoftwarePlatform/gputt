@@ -16,7 +16,6 @@ endif()
 endif()
 
 option(ENABLE_NVTOOLS "Enable nvvp profiling of CPU code" OFF)
-option(ENABLE_NO_ALIGNED_ALLOC "Enable aligned_alloc() function implemented in hipTT" OFF)
 
 if ("x${Python3_VERSION}" STREQUAL "x")
 find_package(Python3 COMPONENTS Interpreter Development)
@@ -30,7 +29,10 @@ set(PYBIND11_PYTHON_VERSION ${Python3_VERSION})
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/pybind11)
 
 file(GLOB ${PROJECT_NAME}_SOURCE_FILES "src/*.cu" "include/*.h")
+file(GLOB ${PROJECT_NAME}_bench_SOURCE_FILES "src/bench/bench.cu")
+file(GLOB ${PROJECT_NAME}_test_SOURCE_FILES "src/test/test.cu")
 
+include(CheckLanguage)
 check_language(HIP)
 check_language(CUDA)
 
@@ -52,6 +54,8 @@ find_package(hip REQUIRED)
 set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodeview" ${CMAKE_HIP_FLAGS})
 
 set_source_files_properties(${${PROJECT_NAME}_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
+set_source_files_properties(${${PROJECT_NAME}_bench_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
+set_source_files_properties(${${PROJECT_NAME}_test_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
 
 elseif(CMAKE_CUDA_COMPILER)
 
@@ -70,31 +74,20 @@ if(ENABLE_NVTOOLS)
     link_libraries(-lnvToolsExt)
 endif()
 
-# ENABLE_NO_ALIGNED_ALLOC
-if(ENABLE_NO_ALIGNED_ALLOC)
-    add_definitions(-DNO_ALIGNED_ALLOC)
-else()
-    # this is available in C11 N.B. std::aligned_alloc is available in C++17
-    CHECK_FUNCTION_EXISTS(aligned_alloc HAVE_ALIGNED_ALLOC)
-    if(NOT HAVE_ALIGNED_ALLOC)
-        add_definitions(-DNO_ALIGNED_ALLOC)
-    endif()
-endif()
-
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCE_FILES})
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PROJECT_NAME} hip::amdhip64)
 
-add_executable(${PROJECT_NAME}_bench "src/bench/bench.cu")
-target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_14)
+add_executable(${PROJECT_NAME}_bench ${${PROJECT_NAME}_bench_SOURCE_FILES})
+target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_17)
 target_link_libraries(${PROJECT_NAME}_bench PUBLIC ${PROJECT_NAME})
 
-add_executable(${PROJECT_NAME}_test "src/test/test.cu")
-target_compile_features(${PROJECT_NAME}_test PUBLIC cxx_std_14)
+add_executable(${PROJECT_NAME}_test ${${PROJECT_NAME}_test_SOURCE_FILES})
+target_compile_features(${PROJECT_NAME}_test PUBLIC cxx_std_17)
 target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME})
 
 pybind11_add_module(${PROJECT_NAME}_python "src/python/${PROJECT_NAME}.cu" "src/python/${PROJECT_NAME}_module.cu")
