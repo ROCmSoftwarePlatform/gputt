@@ -25,6 +25,7 @@ SOFTWARE.
 #ifndef CUTTPLAN_H
 #define CUTTPLAN_H
 
+#include <hip/hip_runtime.h>
 #include <list>
 #include <vector>
 #include "hipttTypes.h"
