@@ -28,7 +28,7 @@ SOFTWARE.
 #include <cstring>         // strcmp
 #include <cmath>
 #include "hiptt.h"
-#include "HipUtils.h"
+#include "hipttUtils.h"
 #include "TensorTester.h"
 #include "hipttTimer.h"
 #include "hipttGpuModel.h"  // testCounters

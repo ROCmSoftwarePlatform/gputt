@@ -31,10 +31,10 @@ SOFTWARE.
 #include <cctype>
 #include <random>
 #include "hiptt.h"
-#include "HipUtils.h"
+#include "hipttUtils.h"
 #include "TensorTester.h"
 #include "hipttTimer.h"
-#include "HipMemcpy.h"
+#include "hipttMemcpy.h"
 #include "int_vector.h"
 
 #define MILLION 1000000

@@ -25,12 +25,11 @@ SOFTWARE.
 
 #include <algorithm>
 #include <random>
-#include <hip/hip_runtime.h>
 #include <cstring>               // memcpy
 #include "hipttGpuModel.h"
 #include "hipttGpuModelKernel.h"
 #ifdef ENABLE_NVTOOLS
-#include "HipUtils.h"
+#include "hipttUtils.h"
 #endif
 
 // #define CALC_L1_CACHELINES

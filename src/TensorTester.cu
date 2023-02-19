@@ -26,7 +26,7 @@ SOFTWARE.
 //
 // Testing utilities
 //
-#include "HipUtils.h"
+#include "hipttUtils.h"
 #include "TensorTester.h"
 
 #ifdef __HIP_PLATFORM_HCC__

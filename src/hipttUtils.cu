@@ -27,7 +27,7 @@ SOFTWARE.
 #ifdef ENABLE_NVTOOLS
 #include <nvToolsExtHip.h>
 #endif
-#include "HipUtils.h"
+#include "hipttUtils.h"
 
 //----------------------------------------------------------------------------------------
 

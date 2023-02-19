@@ -27,7 +27,7 @@ SOFTWARE.
 #include <unordered_set>
 #include <cmath>
 #include <random>
-#include "HipUtils.h"
+#include "hipttUtils.h"
 #include "hipttplan.h"
 #include "hipttkernel.h"
 #include "hipttGpuModel.h"

@@ -24,11 +24,11 @@ SOFTWARE.
 *******************************************************************************/
 
 #include "hipttTimer.h"
-#include "HipUtils.h"
+#include "hipttUtils.h"
 // #include <limits>       // std::numeric_limits
 #include <algorithm>
 #ifdef CUDA_EVENT_TIMER
-#include "HipUtils.h"
+#include "hipttUtils.h"
 #endif
 
 #ifdef CUDA_EVENT_TIMER

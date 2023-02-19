@@ -23,8 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include "HipUtils.h"
-#include "HipMemcpy.h"
+#include "hipttUtils.h"
+#include "hipttMemcpy.h"
 
 const int numthread = 64;
 
