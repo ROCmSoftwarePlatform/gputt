@@ -26,10 +26,10 @@ SOFTWARE.
 #include <algorithm>
 #include <random>
 #include <cstring>               // memcpy
-#include "hipttGpuModel.h"
-#include "hipttGpuModelKernel.h"
+#include "gputtGpuModel.h"
+#include "gputtGpuModelKernel.h"
 #ifdef ENABLE_NVTOOLS
-#include "hipttUtils.h"
+#include "gputtUtils.h"
 #endif
 
 // #define CALC_L1_CACHELINES
@@ -765,7 +765,7 @@ struct GpuModelProp {
   }
 };
 
-void prepmodel5(const hipDeviceProp_t& prop, GpuModelProp& gpuModelProp,
+void prepmodel5(const gpuDeviceProp_t& prop, GpuModelProp& gpuModelProp,
   int nthread, int numActiveBlock, float mlp,
   int gld_req, int gst_req, int gld_tran, int gst_tran,
   int sld_req, int sst_req, int sld_tran, int sst_tran,
@@ -810,7 +810,7 @@ void prepmodel5(const hipDeviceProp_t& prop, GpuModelProp& gpuModelProp,
   MWP = std::min(MWP*mlp, std::min(MWP_peak_BW, (double)active_warps_per_SM));
 }
 
-double cyclesPacked(const bool isSplit, const size_t sizeofType, const hipDeviceProp_t& prop,
+double cyclesPacked(const bool isSplit, const size_t sizeofType, const gpuDeviceProp_t& prop,
   int nthread, int numActiveBlock, float mlp, 
   int gld_req, int gst_req, int gld_tran, int gst_tran,
   int sld_req, int sst_req, int sld_tran, int sst_tran, int num_iter, int cl_full, int cl_part) {
@@ -831,7 +831,7 @@ double cyclesPacked(const bool isSplit, const size_t sizeofType, const hipDevice
   return cycles;
 }
 
-double cyclesTiled(const bool isCopy, const size_t sizeofType, const hipDeviceProp_t& prop,
+double cyclesTiled(const bool isCopy, const size_t sizeofType, const gpuDeviceProp_t& prop,
   int nthread, int numActiveBlock, float mlp, 
   int gld_req, int gst_req, int gld_tran, int gst_tran,
   int sld_req, int sst_req, int sld_tran, int sst_tran, int num_iter, int cl_full, int cl_part) {

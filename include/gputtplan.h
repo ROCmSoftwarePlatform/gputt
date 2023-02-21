@@ -28,7 +28,7 @@ SOFTWARE.
 #include "gpu_runtime.h"
 #include <list>
 #include <vector>
-#include "hipttTypes.h"
+#include "gputtTypes.h"
 
 #ifdef __HIP_PLATFORM_HCC__
 const int TILEDIM = 64;
@@ -119,13 +119,13 @@ public:
  };
 
 // Class that stores the plan data
-class hipttPlan_t {
+class gputtPlan_t {
 public:
   // Device for which this plan was made
   int deviceID;
 
   // CUDA stream associated with the plan
-  hipStream_t stream;
+  gpuStream_t stream;
 
   // Kernel launch configuration
   LaunchConfig launchConfig;
@@ -181,33 +181,33 @@ public:
   // For TiledSingleOutRank
   TensorConv* Mm;
 
-  hipttPlan_t();
-  ~hipttPlan_t();
+  gputtPlan_t();
+  ~gputtPlan_t();
   void print();
-  void setStream(hipStream_t stream_in);
-  bool countCycles(hipDeviceProp_t& prop, const int numPosMbarSample=0);
+  void setStream(gpuStream_t stream_in);
+  bool countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample=0);
   void activate();
   void nullDevicePointers();
 
   static bool createPlans(const int rank, const int* dim, const int* permutation,
     const int redRank, const int* redDim, const int* redPermutation,
-    const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
 
 private:
   static bool createTrivialPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
 
   static bool createTiledPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
 
   static bool createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
 
   static bool createPackedPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
 
   static bool createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
 
   bool setup(const int rank_in, const int* dim, const int* permutation,
     const size_t sizeofType_in, const TensorSplit& tensorSplit_in,
@@ -215,11 +215,11 @@ private:
 
 };
 
-void printMatlab(hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans, std::vector<double>& times);
+void printMatlab(gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans, std::vector<double>& times);
 
 void reduceRanks(const int rank, const int* dim, const int* permutation,
   std::vector<int>& redDim, std::vector<int>& redPermutation);
 
-std::list<hipttPlan_t>::iterator choosePlanHeuristic(std::list<hipttPlan_t>& plans);
+std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& plans);
 
 #endif // CUTTPLAN_H

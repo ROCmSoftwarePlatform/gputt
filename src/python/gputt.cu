@@ -1,4 +1,4 @@
-#include "hiptt.h"
+#include "gputt.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -13,49 +13,49 @@ namespace py = pybind11;
 
 namespace {
 
-const char* hipttErrorString(hipttResult result)
+const char* gputtErrorString(gputtResult result)
 {
-	const char* hipttSuccess = "Success";
-	const char* hipttInvalidPlan = "Invalid plan handle";
-	const char* hipttInvalidParameter = "Invalid input parameter";
-	const char* hipttInvalidDevice = "Execution tried on device different than where plan was created";
-	const char* hipttInternalError = "Internal error";
-	const char* hipttUndefinedError = "Undefined error";
-	const char* hipttUnknownError = "Unknown error";
+	const char* gputtSuccess = "Success";
+	const char* gputtInvalidPlan = "Invalid plan handle";
+	const char* gputtInvalidParameter = "Invalid input parameter";
+	const char* gputtInvalidDevice = "Execution tried on device different than where plan was created";
+	const char* gputtInternalError = "Internal error";
+	const char* gputtUndefinedError = "Undefined error";
+	const char* gputtUnknownError = "Unknown error";
 
 	switch (result)
 	{
-	case CUTT_SUCCESS: return hipttSuccess;
-	case CUTT_INVALID_PLAN: return hipttInvalidPlan;
-	case CUTT_INVALID_PARAMETER: return hipttInvalidParameter;
-	case CUTT_INVALID_DEVICE: return hipttInvalidDevice;
-	case CUTT_INTERNAL_ERROR: return hipttInternalError;
-	case CUTT_UNDEFINED_ERROR: return hipttUndefinedError;
+	case CUTT_SUCCESS: return gputtSuccess;
+	case CUTT_INVALID_PLAN: return gputtInvalidPlan;
+	case CUTT_INVALID_PARAMETER: return gputtInvalidParameter;
+	case CUTT_INVALID_DEVICE: return gputtInvalidDevice;
+	case CUTT_INTERNAL_ERROR: return gputtInternalError;
+	case CUTT_UNDEFINED_ERROR: return gputtUndefinedError;
 	}
 
-	return hipttUnknownError;
+	return gputtUnknownError;
 }
 
-class hipTT
+class gpuTT
 {
-	hipttHandle plan;
-	hipttResult initStatus;
+	gputtHandle plan;
+	gputtResult initStatus;
 	bool planInitialized = false;
 
 	int rank;
 	const std::vector<int> dim;
 	const std::vector<int> permutation;
-	hipStream_t stream;
+	gpuStream_t stream;
 
 public :
 
-	hipTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_) :
+	gpuTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
-		// Defer hipttPlan to the first use, as we don't know the type yet.
+		// Defer gputtPlan to the first use, as we don't know the type yet.
 
-		py::object pyhip = py::module::import("pyhip");
-		py::object pystream = pyhip.attr("driver").attr("Stream");
+		py::object pygpu = py::module::import("pygpu");
+		py::object pystream = pygpu.attr("driver").attr("Stream");
 
 		if (stream_.is_none())
 			stream = 0;
@@ -64,34 +64,34 @@ public :
 			if (!py::isinstance(stream_, pystream))
 			{
 				std::stringstream ss;
-				ss << "Stream argument must be a pyhip.driver.stream, got: ";
+				ss << "Stream argument must be a pygpu.driver.stream, got: ";
 				ss << py::str(stream_);
 				throw std::invalid_argument(ss.str());
 			}
 
-			stream = (hipStream_t)stream_.attr("handle_int").cast<intptr_t>();
+			stream = (gpuStream_t)stream_.attr("handle_int").cast<intptr_t>();
 		}
 	}
 
-	hipTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_,
+	gpuTT(int rank_, const std::vector<int>& dim_, const std::vector<int>& permutation_, const py::object& stream_,
 		const py::object& idata, py::object& odata, const void* alpha = NULL, const void* beta = NULL) :
 		rank(rank_), dim(dim_), permutation(permutation_)
 	{
-		py::object pyhip = py::module::import("pyhip");
-		py::object pygpuarray = pyhip.attr("gpuarray");
-		py::object pystream = pyhip.attr("driver").attr("Stream");
+		py::object pygpu = py::module::import("pygpu");
+		py::object pygpuarray = pygpu.attr("gpuarray");
+		py::object pystream = pygpu.attr("driver").attr("Stream");
 
 		if (!py::isinstance(idata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Input array must be a pyhip.gpuarray, got: ";
+			ss << "Input array must be a pygpu.gpuarray, got: ";
 			ss << py::str(idata);
 			throw std::invalid_argument(ss.str());
 		}
 		if (!py::isinstance(odata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Output array must be a pyhip.gpuarray, got: ";
+			ss << "Output array must be a pygpu.gpuarray, got: ";
 			ss << py::str(odata);
 			throw std::invalid_argument(ss.str());
 		}
@@ -103,12 +103,12 @@ public :
 			if (!py::isinstance(stream_, pystream))
 			{
 				std::stringstream ss;
-				ss << "Stream argument must be a pyhip.driver.stream, got: ";
+				ss << "Stream argument must be a pygpu.driver.stream, got: ";
 				ss << py::str(stream_);
 				throw std::invalid_argument(ss.str());
 			}
 
-			stream = (hipStream_t)stream_.attr("handle_int").cast<intptr_t>();
+			stream = (gpuStream_t)stream_.attr("handle_int").cast<intptr_t>();
 		}
 
 		if (!idata.attr("dtype").cast<pybind11::dtype>().is(
@@ -120,34 +120,34 @@ public :
 		void* ogpuarray = reinterpret_cast<void*>(odata.attr("ptr").cast<intptr_t>());
 
 		size_t sizeofType = idata.attr("itemsize").cast<size_t>();
-		initStatus = hipttPlanMeasure(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
+		initStatus = gputtPlanMeasure(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
 			reinterpret_cast<const int*>(&permutation[0]), sizeofType, stream,
 			igpuarray, ogpuarray, alpha, beta);
 		planInitialized = true;
 	}
 
-	~hipTT()
+	~gpuTT()
 	{
-		hipttDestroy(plan);
+		gputtDestroy(plan);
 	}
 
 	void execute(const py::object& idata, py::object& odata, const py::object& pyalpha, const py::object& pybeta)
 	{
-		py::object pyhip = py::module::import("pyhip");
-		py::object pygpuarray = pyhip.attr("gpuarray").attr("GPUArray");
-		py::object pystream = pyhip.attr("driver").attr("Stream");
+		py::object pygpu = py::module::import("pygpu");
+		py::object pygpuarray = pygpu.attr("gpuarray").attr("GPUArray");
+		py::object pystream = pygpu.attr("driver").attr("Stream");
 
 		if (!py::isinstance(idata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Input array must be a pyhip.gpuarray, got: ";
+			ss << "Input array must be a pygpu.gpuarray, got: ";
 			ss << py::str(idata);
 			throw std::invalid_argument(ss.str());
 		}
 		if (!py::isinstance(odata, pygpuarray))
 		{
 			std::stringstream ss;
-			ss << "Output array must be a pyhip.gpuarray, got: ";
+			ss << "Output array must be a pygpu.gpuarray, got: ";
 			ss << py::str(odata);
 			throw std::invalid_argument(ss.str());
 		}
@@ -171,7 +171,7 @@ public :
 		if (!planInitialized)
 		{
 			// Now we know the sizeofType, and can initialize the plan handle.
-			initStatus = hipttPlan(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
+			initStatus = gputtPlan(&plan, rank, reinterpret_cast<const int*>(&dim[0]),
 				reinterpret_cast<const int*>(&permutation[0]), sizeofType, stream);
 			planInitialized = true;
 		}
@@ -179,8 +179,8 @@ public :
 		if (initStatus != CUTT_SUCCESS)
 		{
 			std::stringstream ss;
-			ss << "hipTT error: ";
-			ss << hipttErrorString(initStatus);
+			ss << "gpuTT error: ";
+			ss << gputtErrorString(initStatus);
 			throw std::invalid_argument(ss.str());
 		}
 
@@ -196,12 +196,12 @@ public :
 			vbeta = pybeta.cast<double>();
 			beta = &vbeta;
 		}
-		hipttResult status = hipttExecute(plan, igpuarray, ogpuarray, alpha, beta);
+		gputtResult status = gputtExecute(plan, igpuarray, ogpuarray, alpha, beta);
 		if (status != CUTT_SUCCESS)
 		{
 			std::stringstream ss;
-			ss << "hipTT error: ";
-			ss << hipttErrorString(status);
+			ss << "gpuTT error: ";
+			ss << gputtErrorString(status);
 			throw std::invalid_argument(ss.str());
 		}
 	}
@@ -209,19 +209,19 @@ public :
 
 } // namespace
 
-extern "C" CUTT_API void hiptt_init_python(void* parent_, int submodule, const char* apikey)
+extern "C" CUTT_API void gputt_init_python(void* parent_, int submodule, const char* apikey)
 {
 	if (!parent_) return;
 
 	py::module& parent = *reinterpret_cast<py::module*>(parent_);
-	py::module hiptt = submodule ? parent.def_submodule("hiptt") : parent;
+	py::module gputt = submodule ? parent.def_submodule("gputt") : parent;
 
-	py::class_<hipTT>(hiptt, "hipTT")
+	py::class_<gpuTT>(gputt, "gpuTT")
 		.def(py::init<int, const std::vector<int>&, const std::vector<int>&, const py::object&>(),
 R"doc(Create plan
 
 Parameters
-handle            = Returned handle to hipTT plan
+handle            = Returned handle to gpuTT plan
 rank              = Rank of the tensor
 dim[rank]         = Dimensions of the tensor
 permutation[rank] = Transpose permutation
@@ -236,7 +236,7 @@ Success/unsuccess code)doc"
 R"doc(Create plan and choose implementation by measuring performance
 
 Parameters
-handle            = Returned handle to hipTT plan
+handle            = Returned handle to gpuTT plan
 rank              = Rank of the tensor
 dim[rank]         = Dimensions of the tensor
 permutation[rank] = Transpose permutation
@@ -248,11 +248,11 @@ odata             = Output data size product(dim)
 Returns
 Success/unsuccess code)doc"
 		)
-		.def("execute", &hipTT::execute,
+		.def("execute", &gpuTT::execute,
 R"doc(Execute plan out-of-place; performs a tensor transposition of the form \f[ \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha * \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta * \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
 
 Parameters
-handle            = Returned handle to hipTT plan
+handle            = Returned handle to gpuTT plan
 idata             = Input data size product(dim)
 odata             = Output data size product(dim)
 alpha             = scalar for input

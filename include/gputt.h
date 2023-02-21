@@ -25,10 +25,10 @@ SOFTWARE.
 #ifndef CUTT_H
 #define CUTT_H
 
-#include "gpu_runtime.h" // hipStream_t
+#include "gpu_runtime.h" // gpuStream_t
 
 #ifdef _WIN32
-#ifdef hiptt_EXPORTS
+#ifdef gputt_EXPORTS
 #define CUTT_API __declspec(dllexport)
 #else
 #define CUTT_API __declspec(dllimport)
@@ -37,24 +37,24 @@ SOFTWARE.
 #define CUTT_API
 #endif // _WIN32
 
-// Handle type that is used to store and access hiptt plans
-typedef unsigned int hipttHandle;
+// Handle type that is used to store and access gputt plans
+typedef unsigned int gputtHandle;
 
 // Return value
-typedef enum CUTT_API hipttResult_t {
+typedef enum CUTT_API gputtResult_t {
   CUTT_SUCCESS,            // Success
   CUTT_INVALID_PLAN,       // Invalid plan handle
   CUTT_INVALID_PARAMETER,  // Invalid input parameter
   CUTT_INVALID_DEVICE,     // Execution tried on device different than where plan was created
   CUTT_INTERNAL_ERROR,     // Internal error
   CUTT_UNDEFINED_ERROR,    // Undefined error
-} hipttResult;
+} gputtResult;
 
 //
 // Create plan
 //
 // Parameters
-// handle            = Returned handle to hipTT plan
+// handle            = Returned handle to gpuTT plan
 // rank              = Rank of the tensor
 // dim[rank]         = Dimensions of the tensor
 // permutation[rank] = Transpose permutation
@@ -64,14 +64,14 @@ typedef enum CUTT_API hipttResult_t {
 // Returns
 // Success/unsuccess code
 // 
-hipttResult CUTT_API hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  hipStream_t stream);
+gputtResult CUTT_API gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+  gpuStream_t stream);
 
 //
 // Create plan and choose implementation by measuring performance
 //
 // Parameters
-// handle            = Returned handle to hipTT plan
+// handle            = Returned handle to gpuTT plan
 // rank              = Rank of the tensor
 // dim[rank]         = Dimensions of the tensor
 // permutation[rank] = Transpose permutation
@@ -83,25 +83,25 @@ hipttResult CUTT_API hipttPlan(hipttHandle* handle, int rank, const int* dim, co
 // Returns
 // Success/unsuccess code
 // 
-hipttResult CUTT_API hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  hipStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
+gputtResult CUTT_API gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+  gpuStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 //
 // Destroy plan
 //
 // Parameters
-// handle            = Handle to the hipTT plan
+// handle            = Handle to the gpuTT plan
 // 
 // Returns
 // Success/unsuccess code
 //
-hipttResult CUTT_API hipttDestroy(hipttHandle handle);
+gputtResult CUTT_API gputtDestroy(gputtHandle handle);
 
 //
 // Execute plan out-of-place; performs a tensor transposition of the form \f[ \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha * \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta * \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
 //
 // Parameters
-// handle            = Returned handle to hipTT plan
+// handle            = Returned handle to gpuTT plan
 // idata             = Input data size product(dim)
 // odata             = Output data size product(dim)
 // alpha             = scalar for input
@@ -110,7 +110,7 @@ hipttResult CUTT_API hipttDestroy(hipttHandle handle);
 // Returns
 // Success/unsuccess code
 //
-hipttResult CUTT_API hipttExecute(hipttHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
+gputtResult CUTT_API gputtExecute(gputtHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 #endif // CUTT_H
 

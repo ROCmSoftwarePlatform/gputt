@@ -46,7 +46,7 @@ SOFTWARE.
 class Timer {
 private:
 #ifdef CUDA_EVENT_TIMER
-  hipEvent_t tmstart, tmend;
+  gpuEvent_t tmstart, tmend;
 #else
   std::chrono::high_resolution_clock::time_point tmstart, tmend;
 #endif
@@ -61,9 +61,9 @@ public:
 };
 
 //
-// Records timings for hipTT and gives out bandwidths and other data
+// Records timings for gpuTT and gives out bandwidths and other data
 //
-class hipttTimer {
+class gputtTimer {
 private:
   // Size of the type we're measuring
   const int sizeofType;
@@ -99,8 +99,8 @@ private:
   std::unordered_map<int, Stat> stats;
 
 public:
-  hipttTimer(int sizeofType);
-  ~hipttTimer();
+  gputtTimer(int sizeofType);
+  ~gputtTimer();
   void start(std::vector<int>& dim, std::vector<int>& permutation);
   void stop();
   double seconds();

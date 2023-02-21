@@ -27,10 +27,10 @@ SOFTWARE.
 #include <unordered_set>
 #include <cmath>
 #include <random>
-#include "hipttUtils.h"
-#include "hipttplan.h"
-#include "hipttkernel.h"
-#include "hipttGpuModel.h"
+#include "gputtUtils.h"
+#include "gputtplan.h"
+#include "gputtkernel.h"
+#include "gputtGpuModel.h"
 
 void printMethod(int method) {
   switch(method) {
@@ -477,24 +477,24 @@ size_t TensorSplit::shmemAlloc(int sizeofType) const {
 //
 // Returns true if the plan with TensorSplit ts already exists
 //
-bool planExists(TensorSplit& ts, std::list<hipttPlan_t>& plans) {
+bool planExists(TensorSplit& ts, std::list<gputtPlan_t>& plans) {
   for (auto it=plans.begin();it != plans.end();it++) {
     if (it->tensorSplit == ts) return true;
   }
   return false;
 }
 
-bool hipttPlan_t::createTrivialPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
+bool gputtPlan_t::createTrivialPlans(const int rank, const int* dim, const int* permutation,
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
 
   if (rank == 1) {
     TensorSplit ts;
     ts.method = Trivial;
     ts.update(1, 1, rank, dim, permutation);    
     LaunchConfig lc;
-    int numActiveBlock = hipttKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+    int numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
-      hipttPlan_t plan;
+      gputtPlan_t plan;
       if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
       plans.push_back(plan);
     }
@@ -503,17 +503,17 @@ bool hipttPlan_t::createTrivialPlans(const int rank, const int* dim, const int* 
   return true;
 }
 
-bool hipttPlan_t::createTiledPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
+bool gputtPlan_t::createTiledPlans(const int rank, const int* dim, const int* permutation,
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
 
   if (permutation[0] != 0 && rank > 1) {
     TensorSplit ts;
     ts.method = Tiled;
     ts.update(1, 1, rank, dim, permutation);    
     LaunchConfig lc;
-    int numActiveBlock = hipttKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+    int numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
-      hipttPlan_t plan;
+      gputtPlan_t plan;
       if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
       plans.push_back(plan);
     }
@@ -522,8 +522,8 @@ bool hipttPlan_t::createTiledPlans(const int rank, const int* dim, const int* pe
   return true;
 }
 
-bool hipttPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
+bool gputtPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
 
   // Count number of Mm and Mk which are the same
   int numMmMkSame = 0;
@@ -540,9 +540,9 @@ bool hipttPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int
       ts.update(numMmMkSame - 1, numMmMkSame, rank, dim, permutation);      
     }
     LaunchConfig lc;
-    int numActiveBlock = hipttKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+    int numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
-      hipttPlan_t plan;
+      gputtPlan_t plan;
       if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
       plans.push_back(plan);
     }
@@ -551,8 +551,8 @@ bool hipttPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int
   return true;
 }
 
-bool hipttPlan_t::createPackedPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
+bool gputtPlan_t::createPackedPlans(const int rank, const int* dim, const int* permutation,
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
 
   LaunchConfig lc;
   for (int numMm=1;numMm < rank;numMm++) {
@@ -560,11 +560,11 @@ bool hipttPlan_t::createPackedPlans(const int rank, const int* dim, const int* p
       TensorSplit ts;
       ts.method = Packed;
       ts.update(numMm, numMk, rank, dim, permutation);
-      int numActiveBlock = hipttKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+      int numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
       // Does not fit on the device, break out of inner loop
       if (numActiveBlock == 0) break;
       if (!planExists(ts, plans)) {
-        hipttPlan_t plan;
+        gputtPlan_t plan;
         if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
         plans.push_back(plan);
       }
@@ -574,8 +574,8 @@ bool hipttPlan_t::createPackedPlans(const int rank, const int* dim, const int* p
   return true;
 }
 
-bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
+bool gputtPlan_t::createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
 
   LaunchConfig lc;
   for (int numMm=1;numMm < rank;numMm++) {
@@ -624,7 +624,7 @@ bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
         int numActiveBlock0, numActiveBlock1, numActiveBlock2;
         LaunchConfig lc0, lc1, lc2;
         for (ts.numSplit=minNumSplit;ts.numSplit <= maxNumSplit;ts.numSplit++) {
-          numActiveBlock = hipttKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+          numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
           if (numActiveBlock != 0) {
             int volMmkUsed = ts.volMmkUsed();
             int val1 = volMmkUsed*numActiveBlock;
@@ -656,7 +656,7 @@ bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
         const unsigned long long int dim_cutoff = ((unsigned long long int)1 << 31);
         unsigned long long int dim0 = (unsigned long long int)ts.splitDim*(unsigned long long int)(ts.numSplit + 1);
         if (!planExists(ts, plans) && dim0 < dim_cutoff) {
-          hipttPlan_t plan;
+          gputtPlan_t plan;
           if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc0, numActiveBlock0)) return false;
           plans.push_back(plan);
         }
@@ -665,7 +665,7 @@ bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
           ts.update(numMm, numMk, rank, dim, permutation);
           unsigned long long int dim1 = (unsigned long long int)ts.splitDim*(unsigned long long int)(ts.numSplit + 1);
           if (!planExists(ts, plans) && dim1 < dim_cutoff) {
-            hipttPlan_t plan;
+            gputtPlan_t plan;
             if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc1, numActiveBlock1)) return false;
             plans.push_back(plan);
           }
@@ -675,7 +675,7 @@ bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
           ts.update(numMm, numMk, rank, dim, permutation);
           unsigned long long int dim2 = (unsigned long long int)ts.splitDim*(unsigned long long int)(ts.numSplit + 1);
           if (!planExists(ts, plans) && dim2 < dim_cutoff) {
-            hipttPlan_t plan;
+            gputtPlan_t plan;
             if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc2, numActiveBlock2)) return false;
             plans.push_back(plan);
           }
@@ -690,9 +690,9 @@ bool hipttPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
 //
 // Create all possible plans
 //
-bool hipttPlan_t::createPlans(const int rank, const int* dim, const int* permutation,
+bool gputtPlan_t::createPlans(const int rank, const int* dim, const int* permutation,
   const int rankRed, const int* dimRed, const int* permutationRed,
-  const size_t sizeofType, const int deviceID, const hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
 
   size_t size0 = plans.size();
   /* if (!createTiledCopyPlans(rank, dim, permutation, sizeofType, deviceID, prop, plans)) return false;*/
@@ -709,7 +709,7 @@ bool hipttPlan_t::createPlans(const int rank, const int* dim, const int* permuta
   return true;
 }
 
-bool operator>(const hipttPlan_t& lhs, const hipttPlan_t& rhs) {
+bool operator>(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
 
   const TensorSplit& lts = lhs.tensorSplit;
   const TensorSplit& rts = rhs.tensorSplit;
@@ -758,7 +758,7 @@ bool operator>(const hipttPlan_t& lhs, const hipttPlan_t& rhs) {
   // }
 }
 
-bool operator<(const hipttPlan_t& lhs, const hipttPlan_t& rhs) {
+bool operator<(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
   return !(lhs > rhs);
 }
 
@@ -766,7 +766,7 @@ bool operator<(const hipttPlan_t& lhs, const hipttPlan_t& rhs) {
 // Returns best plan according to heuristic criteria
 // Returns plans.end() on invalid input or when nothing can be chosen
 //
-std::list<hipttPlan_t>::iterator choosePlanHeuristic(std::list<hipttPlan_t>& plans) {
+std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& plans) {
 
   // Choose the "largest" plan
   auto bestIt = plans.end();
@@ -779,7 +779,7 @@ std::list<hipttPlan_t>::iterator choosePlanHeuristic(std::list<hipttPlan_t>& pla
   return bestIt;
 }
 
-void printMatlab(hipDeviceProp_t& prop, std::list<hipttPlan_t>& plans, std::vector<double>& times) {
+void printMatlab(gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans, std::vector<double>& times) {
   static int count = 0;
   count++;
   int i = 0;
@@ -811,7 +811,7 @@ void LaunchConfig::print() {
 //
 // Output contents of the plan
 //
-void hipttPlan_t::print() {
+void gputtPlan_t::print() {
   printf("method ");
   printMethod(tensorSplit.method);
   printf("\n");
@@ -823,10 +823,10 @@ void hipttPlan_t::print() {
 
 //
 // Setup plan
-// NOTE: Expects that hipttKernelLaunchConfiguration() has been called to setup
+// NOTE: Expects that gputtKernelLaunchConfiguration() has been called to setup
 // launchConfig_in and numActiveBlock_in
 //
-bool hipttPlan_t::setup(const int rank_in, const int* dim, const int* permutation,
+bool gputtPlan_t::setup(const int rank_in, const int* dim, const int* permutation,
   const size_t sizeofType_in, const TensorSplit& tensorSplit_in,
   const LaunchConfig& launchConfig_in, const int numActiveBlock_in) {
   
@@ -847,7 +847,7 @@ bool hipttPlan_t::setup(const int rank_in, const int* dim, const int* permutatio
   }
 
   // Setup launch configuration
-  // numActiveBlock = hipttKernelLaunchConfiguration(sizeofType, tensorSplit, prop, launchConfig);
+  // numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, tensorSplit, prop, launchConfig);
 
   // Build cI
   int* I = new int[rank];
@@ -1062,7 +1062,7 @@ bool hipttPlan_t::setup(const int rank_in, const int* dim, const int* permutatio
 //
 // Count the number of cycles using the MWP-CWP model
 //
-bool hipttPlan_t::countCycles(hipDeviceProp_t& prop, const int numPosMbarSample) {
+bool gputtPlan_t::countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample) {
 
   // Number of elements that are loaded per memory transaction:
   // 128 bytes per transaction
@@ -1214,7 +1214,7 @@ bool hipttPlan_t::countCycles(hipDeviceProp_t& prop, const int numPosMbarSample)
       }
     }
     if (indRoundUp != numRoundUp || indRoundDown != num_ipos) {
-      printf("hipttPlan_t::countCycles, fatal implemention bug\n");
+      printf("gputtPlan_t::countCycles, fatal implemention bug\n");
       return false;
     }
     // Round up is in pos[0 ... numRoundUp - 1]
@@ -1625,11 +1625,11 @@ bool hipttPlan_t::countCycles(hipDeviceProp_t& prop, const int numPosMbarSample)
 //
 // Activates the plan: Allocates device memory buffers and copies data to them
 //
-void hipttPlan_t::activate() {
+void gputtPlan_t::activate() {
 
   if (tensorSplit.sizeMbar > 0) {
     if (Mbar == NULL) {
-      hipCheck(hipMalloc(&Mbar, sizeof(TensorConvInOut) * tensorSplit.sizeMbar));
+      gpuCheck(gpuMalloc(&Mbar, sizeof(TensorConvInOut) * tensorSplit.sizeMbar));
       copy_HtoD<TensorConvInOut>(hostMbar.data(), Mbar, tensorSplit.sizeMbar, stream);
     }
   }
@@ -1637,11 +1637,11 @@ void hipttPlan_t::activate() {
   if (tensorSplit.method == Packed || tensorSplit.method == PackedSplit) {
     int MmkSize = (tensorSplit.method == Packed) ? tensorSplit.sizeMmk : tensorSplit.sizeMmk*2;
     if (Mmk == NULL) {
-      hipCheck(hipMalloc(&Mmk, sizeof(TensorConvInOut) * MmkSize));
+      gpuCheck(gpuMalloc(&Mmk, sizeof(TensorConvInOut) * MmkSize));
       copy_HtoD<TensorConvInOut>(hostMmk.data(), Mmk, MmkSize, stream);
     }
     if (Msh == NULL) {
-      hipCheck(hipMalloc(&Msh, sizeof(TensorConv) * MmkSize));
+      gpuCheck(gpuMalloc(&Msh, sizeof(TensorConv) * MmkSize));
       copy_HtoD<TensorConv>(hostMsh.data(), Msh, MmkSize, stream);
     }
   }
@@ -1651,7 +1651,7 @@ void hipttPlan_t::activate() {
 //
 // Set device buffers to NULL
 //
-void hipttPlan_t::nullDevicePointers() {
+void gputtPlan_t::nullDevicePointers() {
   Mbar = NULL;
   Mmk = NULL;
   Msh = NULL;
@@ -1659,22 +1659,22 @@ void hipttPlan_t::nullDevicePointers() {
   Mm = NULL;
 }
 
-hipttPlan_t::hipttPlan_t() {
-  hipCheck(hipGetDevice(&deviceID));
+gputtPlan_t::gputtPlan_t() {
+  gpuCheck(gpuGetDevice(&deviceID));
   stream = 0;
   numActiveBlock = 0;
   nullDevicePointers();
 }
 
-hipttPlan_t::~hipttPlan_t() {
+gputtPlan_t::~gputtPlan_t() {
   // Deallocate device buffers
-  if (Mbar != NULL) hipCheck(hipFree(Mbar));
-  if (Mmk != NULL) hipCheck(hipFree(Mmk));
-  if (Msh != NULL) hipCheck(hipFree(Msh));
-  if (Mk != NULL) hipCheck(hipFree(Mk));
-  if (Mm != NULL) hipCheck(hipFree(Mm));
+  if (Mbar != NULL) gpuCheck(gpuFree(Mbar));
+  if (Mmk != NULL) gpuCheck(gpuFree(Mmk));
+  if (Msh != NULL) gpuCheck(gpuFree(Msh));
+  if (Mk != NULL) gpuCheck(gpuFree(Mk));
+  if (Mm != NULL) gpuCheck(gpuFree(Mm));
 }
 
-void hipttPlan_t::setStream(hipStream_t stream_in) {
+void gputtPlan_t::setStream(gpuStream_t stream_in) {
   stream = stream_in;
 }

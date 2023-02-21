@@ -24,31 +24,31 @@ SOFTWARE.
 *******************************************************************************/
 #include <list>
 #include <unordered_map>
-#include "hipttUtils.h"
-#include "hipttplan.h"
-#include "hipttkernel.h"
-#include "hipttTimer.h"
-#include "hiptt.h"
+#include "gputtUtils.h"
+#include "gputtplan.h"
+#include "gputtkernel.h"
+#include "gputtTimer.h"
+#include "gputt.h"
 #include <atomic>
 #include <mutex>
 #include <cstdlib>
 // #include <chrono>
 
 // Hash table to store the plans
-static std::unordered_map<hipttHandle, hipttPlan_t* > planStorage;
+static std::unordered_map<gputtHandle, gputtPlan_t* > planStorage;
 static std::mutex planStorageMutex;
 
 // Current handle
-static std::atomic<hipttHandle> curHandle(0);
+static std::atomic<gputtHandle> curHandle(0);
 
 // Table of devices that have been initialized
-static std::unordered_map<int, hipDeviceProp_t> deviceProps;
+static std::unordered_map<int, gpuDeviceProp_t> deviceProps;
 static std::mutex devicePropsMutex;
 
 // Checks prepares device if it's not ready yet and returns device properties
 // Also sets shared memory configuration
-void getDeviceProp(int& deviceID, hipDeviceProp_t &prop) {
-  hipCheck(hipGetDevice(&deviceID));
+void getDeviceProp(int& deviceID, gpuDeviceProp_t &prop) {
+  gpuCheck(gpuGetDevice(&deviceID));
 
   // need to lock this function	
   std::lock_guard<std::mutex> lock(devicePropsMutex);
@@ -56,15 +56,15 @@ void getDeviceProp(int& deviceID, hipDeviceProp_t &prop) {
   auto it = deviceProps.find(deviceID);
   if (it == deviceProps.end()) {
     // Get device properties and store it for later use
-    hipCheck(hipGetDeviceProperties(&prop, deviceID));
-    hipttKernelSetSharedMemConfig();
+    gpuCheck(gpuGetDeviceProperties(&prop, deviceID));
+    gputtKernelSetSharedMemConfig();
     deviceProps.insert({deviceID, prop});
   } else {
     prop = it->second;
   }
 }
 
-static hipttResult hipttPlanCheckInput(int rank, const int* dim, const int* permutation, size_t sizeofType) {
+static gputtResult gputtPlanCheckInput(int rank, const int* dim, const int* permutation, size_t sizeofType) {
   // Check sizeofType
   if (sizeofType != 4 && sizeofType != 8) return CUTT_INVALID_PARAMETER;
   // Check rank
@@ -89,15 +89,15 @@ static hipttResult hipttPlanCheckInput(int rank, const int* dim, const int* perm
   return CUTT_SUCCESS;
 }
 
-hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  hipStream_t stream) {
+gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+  gpuStream_t stream) {
 
 #ifdef ENABLE_NVTOOLS
   gpuRangeStart("init");
 #endif
 
   // Check that input parameters are valid
-  hipttResult inpCheck = hipttPlanCheckInput(rank, dim, permutation, sizeofType);
+  gputtResult inpCheck = gputtPlanCheckInput(rank, dim, permutation, sizeofType);
   if (inpCheck != CUTT_SUCCESS) return inpCheck;
 
   // Create new handle
@@ -112,7 +112,7 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
 
   // Prepare device
   int deviceID;
-  hipDeviceProp_t prop;
+  gpuDeviceProp_t prop;
   getDeviceProp(deviceID, prop);
 
   // Reduce ranks
@@ -121,7 +121,7 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
   reduceRanks(rank, dim, permutation, redDim, redPermutation);
 
   // Create plans from reduced ranks
-  std::list<hipttPlan_t> plans;
+  std::list<gputtPlan_t> plans;
   // if (rank != redDim.size()) {
   //   if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
   // }
@@ -130,7 +130,7 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
   // if (!createPlans(rank, dim, permutation, sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
 
 #if 0
-  if (!hipttKernelDatabase(deviceID, prop)) return CUTT_INTERNAL_ERROR;
+  if (!gputtKernelDatabase(deviceID, prop)) return CUTT_INTERNAL_ERROR;
 #endif
 
 #ifdef ENABLE_NVTOOLS
@@ -141,7 +141,7 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
   // std::chrono::high_resolution_clock::time_point plan_start;
   // plan_start = std::chrono::high_resolution_clock::now();
 
-  if (!hipttPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
+  if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
     sizeofType, deviceID, prop, plans)) return CUTT_INTERNAL_ERROR;
 
   // std::chrono::high_resolution_clock::time_point plan_end;
@@ -165,13 +165,13 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
 #endif
 
   // Choose the plan
-  std::list<hipttPlan_t>::iterator bestPlan = choosePlanHeuristic(plans);
+  std::list<gputtPlan_t>::iterator bestPlan = choosePlanHeuristic(plans);
   if (bestPlan == plans.end()) return CUTT_INTERNAL_ERROR;
 
   // bestPlan->print();
 
   // Create copy of the plan outside the list
-  hipttPlan_t* plan = new hipttPlan_t();
+  gputtPlan_t* plan = new gputtPlan_t();
   // NOTE: No deep copy needed here since device memory hasn't been allocated yet
   *plan = *bestPlan;
   // Set device pointers to NULL in the old copy of the plan so
@@ -197,11 +197,11 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, const int* dim, const int* 
   return CUTT_SUCCESS;
 }
 
-hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  hipStream_t stream, const void* idata, void* odata, const void* alpha, const void *beta) {
+gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+  gpuStream_t stream, const void* idata, void* odata, const void* alpha, const void *beta) {
 
   // Check that input parameters are valid
-  hipttResult inpCheck = hipttPlanCheckInput(rank, dim, permutation, sizeofType);
+  gputtResult inpCheck = gputtPlanCheckInput(rank, dim, permutation, sizeofType);
   if (inpCheck != CUTT_SUCCESS) return inpCheck;
 
   if (idata == odata) return CUTT_INVALID_PARAMETER;
@@ -218,7 +218,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
 
   // Prepare device
   int deviceID;
-  hipDeviceProp_t prop;
+  gpuDeviceProp_t prop;
   getDeviceProp(deviceID, prop);
 
   // Reduce ranks
@@ -227,7 +227,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
   reduceRanks(rank, dim, permutation, redDim, redPermutation);
 
   // Create plans from reduced ranks
-  std::list<hipttPlan_t> plans;
+  std::list<gputtPlan_t> plans;
 #if 0
   // if (rank != redDim.size()) {
     if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
@@ -236,7 +236,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
   // Create plans from non-reduced ranks
   // if (!createPlans(rank, dim, permutation, sizeofType, prop, plans)) return CUTT_INTERNAL_ERROR;
 #else
-  if (!hipttPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
+  if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
     sizeofType, deviceID, prop, plans)) return CUTT_INTERNAL_ERROR;
 #endif
 
@@ -259,10 +259,10 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
     it->activate();
     // Clear output data to invalidate caches
     set_device_array<char>((char *)odata, -1, numBytes);
-    hipCheck(hipDeviceSynchronize());
+    gpuCheck(gpuDeviceSynchronize());
     timer.start();
     // Execute plan
-    if (!hipttKernel(*it, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
+    if (!gputtKernel(*it, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
     timer.stop();
     double curTime = timer.seconds();
     // it->print();
@@ -282,7 +282,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
   // bestPlan->print();
 
   // Create copy of the plan outside the list
-  hipttPlan_t* plan = new hipttPlan_t();
+  gputtPlan_t* plan = new gputtPlan_t();
   *plan = *bestPlan;
   // Set device pointers to NULL in the old copy of the plan so
   // that they won't be deallocated later when the object is destroyed
@@ -303,23 +303,23 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, const int* dim, cons
   return CUTT_SUCCESS;
 }
 
-void hipttDestroy_callback(hipStream_t stream, hipError_t status, void *userData){
-  hipttPlan_t* plan = (hipttPlan_t*) userData;
+void gputtDestroy_callback(gpuStream_t stream, gpuError_t status, void *userData){
+  gputtPlan_t* plan = (gputtPlan_t*) userData;
   delete plan;
 }
 
-hipttResult hipttDestroy(hipttHandle handle) {
+gputtResult gputtDestroy(gputtHandle handle) {
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
   if (it == planStorage.end()) return CUTT_INVALID_PLAN;
-  // Delete instance of hipttPlan_t	 
+  // Delete instance of gputtPlan_t	 
   delete it->second;	  
   // Delete entry from plan storage	  
   planStorage.erase(it);
   return CUTT_SUCCESS;
 }
 
-hipttResult hipttExecute(hipttHandle handle, const void* idata, void* odata, const void* alpha, const void* beta) {
+gputtResult gputtExecute(gputtHandle handle, const void* idata, void* odata, const void* alpha, const void* beta) {
   // prevent modification when find
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
@@ -327,13 +327,13 @@ hipttResult hipttExecute(hipttHandle handle, const void* idata, void* odata, con
 
   if (idata == odata) return CUTT_INVALID_PARAMETER;
 
-  hipttPlan_t& plan = *(it->second);
+  gputtPlan_t& plan = *(it->second);
 
   int deviceID;
-  hipCheck(hipGetDevice(&deviceID));
+  gpuCheck(gpuGetDevice(&deviceID));
   if (deviceID != plan.deviceID) return CUTT_INVALID_DEVICE;
 
-  if (!hipttKernel(plan, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
+  if (!gputtKernel(plan, idata, odata, alpha, beta)) return CUTT_INTERNAL_ERROR;
   return CUTT_SUCCESS;
 }
 

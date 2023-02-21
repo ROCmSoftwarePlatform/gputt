@@ -27,25 +27,25 @@ SOFTWARE.
 #include <ctime>           // std::time
 #include <cstring>         // strcmp
 #include <cmath>
-#include "hiptt.h"
-#include "hipttUtils.h"
+#include "gputt.h"
+#include "gputtUtils.h"
 #include "TensorTester.h"
-#include "hipttTimer.h"
-#include "hipttGpuModel.h"  // testCounters
+#include "gputtTimer.h"
+#include "gputtGpuModel.h"  // testCounters
 
 //
-// Error checking wrapper for hiptt
+// Error checking wrapper for gputt
 //
-#define hipttCheck(stmt) do {                                 \
-  hipttResult err = stmt;                            \
+#define gputtCheck(stmt) do {                                 \
+  gputtResult err = stmt;                            \
   if (err != CUTT_SUCCESS) {                          \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
   }                                                  \
 } while(0)
 
-hipttTimer* timerFloat;
-hipttTimer* timerDouble;
+gputtTimer* timerFloat;
+gputtTimer* timerDouble;
 
 long long int* dataIn  = NULL;
 long long int* dataOut = NULL;
@@ -75,25 +75,25 @@ int main(int argc, char *argv[]) {
   }
 
   if (!arg_ok) {
-    printf("hiptt_test [options]\n");
+    printf("gputt_test [options]\n");
     printf("Options:\n");
     printf("-device gpuid : use GPU with ID gpuid\n");
     return 1;
   }
 
   if (gpuid >= 0) {
-    hipCheck(hipSetDevice(gpuid));
+    gpuCheck(gpuSetDevice(gpuid));
   }
 
-  hipCheck(hipDeviceReset());
-  hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte); // may fail, if unsupported
+  gpuCheck(gpuDeviceReset());
+  gpuDeviceSetSharedMemConfig(gpuSharedMemBankSizeEightByte); // may fail, if unsupported
 
-  timerFloat = new hipttTimer(4);
-  timerDouble = new hipttTimer(8);
+  timerFloat = new gputtTimer(4);
+  timerDouble = new gputtTimer(8);
 
   // Allocate device data, 100M elements
-  hipCheck(hipMalloc(&dataIn, sizeof(long long int) * dataSize));
-  hipCheck(hipMalloc(&dataOut, sizeof(long long int) * dataSize));
+  gpuCheck(gpuMalloc(&dataIn, sizeof(long long int) * dataSize));
+  gpuCheck(gpuMalloc(&dataOut, sizeof(long long int) * dataSize));
 
   // Create tester
   tester = new TensorTester();
@@ -121,14 +121,14 @@ int main(int argc, char *argv[]) {
     printf("test OK\n");
   }
 
-  hipCheck(hipFree(dataIn));
-  hipCheck(hipFree(dataOut));
+  gpuCheck(gpuFree(dataIn));
+  gpuCheck(gpuFree(dataOut));
   delete tester;
 
   delete timerFloat;
   delete timerDouble;
 
-  hipCheck(hipDeviceReset());
+  gpuCheck(gpuDeviceReset());
   return 0;
 }
 
@@ -375,29 +375,29 @@ bool test4() {
 
   const int numStream = 10;
 
-  hipStream_t streams[numStream];
+  gpuStream_t streams[numStream];
   for (int i=0;i < numStream;i++) {
-    hipCheck(hipStreamCreate(&streams[i]));
+    gpuCheck(gpuStreamCreate(&streams[i]));
   }
 
-  hipCheck(hipDeviceSynchronize());
+  gpuCheck(gpuDeviceSynchronize());
 
-  hipttHandle plans[numStream];
+  gputtHandle plans[numStream];
 
   for (int i=0;i < numStream;i++) {
-    hipttCheck(hipttPlan(&plans[i], dim.size(), dim.data(), permutation.data(), sizeof(double), streams[i]));
-    hipttCheck(hipttExecute(plans[i], dataIn, dataOut));
+    gputtCheck(gputtPlan(&plans[i], dim.size(), dim.data(), permutation.data(), sizeof(double), streams[i]));
+    gputtCheck(gputtExecute(plans[i], dataIn, dataOut));
   }
 
-  hipCheck(hipDeviceSynchronize());
+  gpuCheck(gpuDeviceSynchronize());
 
   bool run_ok = tester->checkTranspose(dim.size(), dim.data(), permutation.data(), (long long int *)dataOut);
 
-  hipCheck(hipDeviceSynchronize());
+  gpuCheck(gpuDeviceSynchronize());
 
   for (int i=0;i < numStream;i++) {
-    hipttCheck(hipttDestroy(plans[i]));
-    hipCheck(hipStreamDestroy(streams[i]));
+    gputtCheck(gputtDestroy(plans[i]));
+    gpuCheck(gpuStreamDestroy(streams[i]));
   }
 
   return run_ok;
@@ -454,23 +454,23 @@ bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
     return false;
   }
 
-  hipttTimer* timer;
+  gputtTimer* timer;
   if (sizeof(T) == 4) {
     timer = timerFloat;
   } else {
     timer = timerDouble;
   }
 
-  hipttHandle plan;
-  hipttCheck(hipttPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
+  gputtHandle plan;
+  gputtCheck(gputtPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
   set_device_array<T>((T *)dataOut, -1, vol);
-  hipCheck(hipDeviceSynchronize());
+  gpuCheck(gpuDeviceSynchronize());
 
   if (vol > 1000000) timer->start(dim, permutation);
-  hipttCheck(hipttExecute(plan, dataIn, dataOut));
+  gputtCheck(gputtExecute(plan, dataIn, dataOut));
   if (vol > 1000000) timer->stop();
 
-  hipttCheck(hipttDestroy(plan));
+  gputtCheck(gputtDestroy(plan));
 
   return tester->checkTranspose<T>(rank, dim.data(), permutation.data(), (T *)dataOut);
 }

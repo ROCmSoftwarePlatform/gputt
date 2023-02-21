@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
-project(hiptt CXX)
+project(gputt CXX)
 
 if ("x" STREQUAL "x${CMAKE_BUILD_TYPE}")
 set(CMAKE_BUILD_TYPE Release)
@@ -101,7 +101,7 @@ target_link_libraries(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME}_python PROPERTIES LIBRARY_OUTPUT_NAME "${PROJECT_NAME}")
 
 install(TARGETS ${PROJECT_NAME} ARCHIVE DESTINATION . LIBRARY DESTINATION .)
-install(FILES include/hiptt.h DESTINATION include)
+install(FILES include/gputt.h DESTINATION include)
 install(TARGETS ${PROJECT_NAME}_python ${PROJECT_NAME}_bench ${PROJECT_NAME}_test DESTINATION .)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples DESTINATION .)
 

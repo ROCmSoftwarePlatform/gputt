@@ -27,16 +27,16 @@ SOFTWARE.
 #ifdef ENABLE_NVTOOLS
 #include <nvToolsExtHip.h>
 #endif
-#include "hipttUtils.h"
+#include "gputtUtils.h"
 
 //----------------------------------------------------------------------------------------
 
-void set_device_array_async_T(void *data, int value, const size_t ndata, hipStream_t stream, const size_t sizeofT) {
-  hipCheck(hipMemsetAsync(data, value, sizeofT*ndata, stream));
+void set_device_array_async_T(void *data, int value, const size_t ndata, gpuStream_t stream, const size_t sizeofT) {
+  gpuCheck(gpuMemsetAsync(data, value, sizeofT*ndata, stream));
 }
 
 void set_device_array_T(void *data, int value, const size_t ndata, const size_t sizeofT) {
-  hipCheck(hipMemset(data, value, sizeofT*ndata));
+  gpuCheck(gpuMemset(data, value, sizeofT*ndata));
 }
 
 
@@ -45,27 +45,27 @@ void set_device_array_T(void *data, int value, const size_t ndata, const size_t 
 //
 // Copies memory Host -> Device
 //
-void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len, hipStream_t stream,
+void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len, gpuStream_t stream,
            const size_t sizeofT) {
-  hipCheck(hipMemcpyAsync(d_array, h_array, sizeofT*array_len, hipMemcpyDefault, stream));
+  gpuCheck(gpuMemcpyAsync(d_array, h_array, sizeofT*array_len, gpuMemcpyDefault, stream));
 }
 
 void copy_HtoD_T(const void *h_array, void *d_array, size_t array_len,
      const size_t sizeofT) {
-  hipCheck(hipMemcpy(d_array, h_array, sizeofT*array_len, hipMemcpyDefault));
+  gpuCheck(gpuMemcpy(d_array, h_array, sizeofT*array_len, gpuMemcpyDefault));
 }
 
 //----------------------------------------------------------------------------------------
 //
 // Copies memory Device -> Host
 //
-void copy_DtoH_async_T(const void *d_array, void *h_array, const size_t array_len, hipStream_t stream,
+void copy_DtoH_async_T(const void *d_array, void *h_array, const size_t array_len, gpuStream_t stream,
            const size_t sizeofT) {
-  hipCheck(hipMemcpyAsync(h_array, d_array, sizeofT*array_len, hipMemcpyDefault, stream));
+  gpuCheck(gpuMemcpyAsync(h_array, d_array, sizeofT*array_len, gpuMemcpyDefault, stream));
 }
 
 void copy_DtoH_T(const void *d_array, void *h_array, const size_t array_len, const size_t sizeofT) {
-  hipCheck(hipMemcpy(h_array, d_array, sizeofT*array_len, hipMemcpyDefault));
+  gpuCheck(gpuMemcpy(h_array, d_array, sizeofT*array_len, gpuMemcpyDefault));
 }
 
 //----------------------------------------------------------------------------------------

@@ -23,9 +23,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include "hipttUtils.h"
+#include "gputtUtils.h"
 #include "LRUCache.h"
-#include "hipttkernel.h"
+#include "gputtkernel.h"
 
 #define RESTRICT __restrict__
 
@@ -551,28 +551,28 @@ __global__ void transposeTiledCopy(
 //
 // Sets shared memory bank configuration for all kernels. Needs to be called once per device.
 //
-void hipttKernelSetSharedMemConfig() {  
-#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePacked<float, NREG, true>), hipSharedMemBankSizeFourByte ))
+void gputtKernelSetSharedMemConfig() {  
+#define CALL(NREG) gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePacked<float, NREG, true>), gpuSharedMemBankSizeFourByte ))
 #include "calls.h"
 #undef CALL
 
-#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePacked<double, NREG, true>), hipSharedMemBankSizeEightByte ))
+#define CALL(NREG) gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePacked<double, NREG, true>), gpuSharedMemBankSizeEightByte ))
 #include "calls.h"
 #undef CALL
 
-#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePackedSplit<float, NREG, true>), hipSharedMemBankSizeFourByte ))
+#define CALL(NREG) gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePackedSplit<float, NREG, true>), gpuSharedMemBankSizeFourByte ))
 #include "calls.h"
 #undef CALL
 
-#define CALL(NREG) hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePackedSplit<double, NREG, true>), hipSharedMemBankSizeEightByte ))
+#define CALL(NREG) gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposePackedSplit<double, NREG, true>), gpuSharedMemBankSizeEightByte ))
 #include "calls.h"
 #undef CALL
 
-  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiled<float, true>), hipSharedMemBankSizeFourByte));
-  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiledCopy<float, true>), hipSharedMemBankSizeFourByte));
+  gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiled<float, true>), gpuSharedMemBankSizeFourByte));
+  gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiledCopy<float, true>), gpuSharedMemBankSizeFourByte));
 
-  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiled<double, true>), hipSharedMemBankSizeEightByte));
-  hipCheck(hipFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiledCopy<double, true>), hipSharedMemBankSizeEightByte));
+  gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiled<double, true>), gpuSharedMemBankSizeEightByte));
+  gpuCheck(gpuFuncSetSharedMemConfig(reinterpret_cast<void*>(&transposeTiledCopy<double, true>), gpuSharedMemBankSizeEightByte));
 
 }
 
@@ -587,7 +587,7 @@ LRUCache<unsigned long long int, int> nabCache(CACHE_SIZE, -1);
 // Returns the maximum number of active blocks per SM
 //
 int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig& lc,
-  const int deviceID, const hipDeviceProp_t& prop) {
+  const int deviceID, const gpuDeviceProp_t& prop) {
 
   int numActiveBlock;
   int numthread = lc.numthread.x * lc.numthread.y * lc.numthread.z;
@@ -602,7 +602,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     case Packed:
     {
 #define CALL0(TYPE, NREG) \
-  hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
+  gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
     transposePacked<TYPE, NREG, true>, numthread, lc.shmemsize)
       switch(lc.numRegStorage) {
 #define CALL(ICASE) case ICASE: if (sizeofType == 4) CALL0(float,  ICASE); if (sizeofType == 8) CALL0(double, ICASE); break
@@ -617,7 +617,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     {
       // Allocate cache structure if needed
       if (numDevices == -1) {
-        hipCheck(hipGetDeviceCount(&numDevices));
+        gpuCheck(gpuGetDeviceCount(&numDevices));
       }
       // Build unique key for cache
       int key_warp = (numthread/prop.warpSize - 1);
@@ -639,7 +639,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
       if (numActiveBlock == -1) {
         // key not found in cache, determine value and add it to cache
 #define CALL0(TYPE, NREG) \
-  hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
+  gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
     transposePackedSplit<TYPE, NREG, true>, numthread, lc.shmemsize)
       switch(lc.numRegStorage) {
 #define CALL(ICASE) case ICASE: if (sizeofType == 4) CALL0(float,  ICASE); if (sizeofType == 8) CALL0(double, ICASE); break
@@ -655,10 +655,10 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     case Tiled:
     {
       if (sizeofType == 4) {
-        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiled<float, true>, numthread, lc.shmemsize);
       } else {
-        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiled<double, true>, numthread, lc.shmemsize);
       }
     }
@@ -667,10 +667,10 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     case TiledCopy:
     {
       if (sizeofType == 4) {
-        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiledCopy<float, true>, numthread, lc.shmemsize);
       } else {
-        hipOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+        gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiledCopy<double, true>, numthread, lc.shmemsize);
       }
     }
@@ -692,8 +692,8 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
 // lc.shmemsize
 // lc.numRegStorage  (for Packed method)
 //
-int hipttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
-  const int deviceID, const hipDeviceProp_t& prop, LaunchConfig& lc) {
+int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
+  const int deviceID, const gpuDeviceProp_t& prop, LaunchConfig& lc) {
 
   // Return value of numActiveBlock
   int numActiveBlockReturn = -1;
@@ -867,7 +867,7 @@ int hipttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
   return numActiveBlockReturn;
 }
 
-bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const void* alphaPtr,
+bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const void* alphaPtr,
       const void* betaPtr) {
 
   LaunchConfig& lc = plan.launchConfig;
@@ -888,11 +888,11 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
     case Trivial:
     {
       if( alpha != 1 || beta != 0 ){
-         printf("hipTT ERROR: this case still has to be implemented\n"); 
+         printf("gpuTT ERROR: this case still has to be implemented\n"); 
          return false;
       }
-      hipCheck(hipMemcpyAsync(dataOut, dataIn, ts.volMmk*ts.volMbar*plan.sizeofType,
-        hipMemcpyDefault, plan.stream));
+      gpuCheck(gpuMemcpyAsync(dataOut, dataIn, ts.volMmk*ts.volMbar*plan.sizeofType,
+        gpuMemcpyDefault, plan.stream));
     }
     break;
 
@@ -923,7 +923,7 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
          break
 #include "calls.h"
         default:
-        printf("hipttKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
+        printf("gputtKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
         return false;
 #undef CALL
 #undef CALL0
@@ -959,7 +959,7 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
          break
 #include "calls.h"
         default:
-        printf("hipttKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
+        printf("gputtKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
         return false;
 #undef CALL
 #undef CALL0
@@ -1022,6 +1022,6 @@ bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const voi
 
   }
 
-  hipCheck(hipGetLastError());
+  gpuCheck(gpuGetLastError());
   return true;
 }

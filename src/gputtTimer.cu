@@ -23,28 +23,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include "hipttTimer.h"
-#include "hipttUtils.h"
+#include "gputtTimer.h"
+#include "gputtUtils.h"
 // #include <limits>       // std::numeric_limits
 #include <algorithm>
 #ifdef CUDA_EVENT_TIMER
-#include "hipttUtils.h"
+#include "gputtUtils.h"
 #endif
 
 #ifdef CUDA_EVENT_TIMER
 Timer::Timer() {
-  hipCheck(hipEventCreate(&tmstart));
-  hipCheck(hipEventCreate(&tmend));
+  gpuCheck(gpuEventCreate(&tmstart));
+  gpuCheck(gpuEventCreate(&tmend));
 }
 Timer::~Timer() {
-  hipCheck(hipEventDestroy(tmstart));
-  hipCheck(hipEventDestroy(tmend));
+  gpuCheck(gpuEventDestroy(tmstart));
+  gpuCheck(gpuEventDestroy(tmend));
 }
 #endif
 
 void Timer::start() {
 #ifdef CUDA_EVENT_TIMER
-  hipCheck(hipEventRecord(tmstart, 0));
+  gpuCheck(gpuEventRecord(tmstart, 0));
 #else
   tmstart = std::chrono::high_resolution_clock::now();
 #endif
@@ -52,10 +52,10 @@ void Timer::start() {
 
 void Timer::stop() {
 #ifdef CUDA_EVENT_TIMER
-  hipCheck(hipEventRecord(tmend, 0));
-  hipCheck(hipEventSynchronize(tmend));
+  gpuCheck(gpuEventRecord(tmend, 0));
+  gpuCheck(gpuEventSynchronize(tmend));
 #else
-  hipCheck(hipDeviceSynchronize());
+  gpuCheck(gpuDeviceSynchronize());
   tmend = std::chrono::high_resolution_clock::now();
 #endif
 }
@@ -66,7 +66,7 @@ void Timer::stop() {
 double Timer::seconds() {
 #ifdef CUDA_EVENT_TIMER
   float ms;
-  hipCheck(hipEventElapsedTime(&ms, tmstart, tmend));
+  gpuCheck(gpuEventElapsedTime(&ms, tmstart, tmend));
   return (double)(ms/1000.0f);
 #else
   return std::chrono::duration_cast< std::chrono::duration<double> >(tmend - tmstart).count();
@@ -76,17 +76,17 @@ double Timer::seconds() {
 //
 // Class constructor
 //
-hipttTimer::hipttTimer(int sizeofType) : sizeofType(sizeofType) {}
+gputtTimer::gputtTimer(int sizeofType) : sizeofType(sizeofType) {}
 
 //
 // Class destructor
 //
-hipttTimer::~hipttTimer() {}
+gputtTimer::~gputtTimer() {}
 
 //
 // Start timer
 //
-void hipttTimer::start(std::vector<int>& dim, std::vector<int>& permutation) {
+void gputtTimer::start(std::vector<int>& dim, std::vector<int>& permutation) {
   curDim = dim;
   curPermutation = permutation;
   curBytes = sizeofType*2;   // "2x" because every element is read and also written out
@@ -100,7 +100,7 @@ void hipttTimer::start(std::vector<int>& dim, std::vector<int>& permutation) {
 //
 // Stop timer and record statistics
 //
-void hipttTimer::stop() {
+void gputtTimer::stop() {
   timer.stop();
   double bandwidth = GBs();
   auto it = stats.find(curDim.size());
@@ -124,14 +124,14 @@ void hipttTimer::stop() {
 //
 // Returns the duration of the last run in seconds
 //
-double hipttTimer::seconds() {
+double gputtTimer::seconds() {
   return timer.seconds();
 }
 
 //
 // Returns the bandwidth of the last run in GB/s
 //
-double hipttTimer::GBs() {
+double gputtTimer::GBs() {
   const double BILLION = 1000000000.0;
   double sec = seconds();
   return (sec == 0.0) ? 0.0 : (double)(curBytes)/(BILLION*sec);
@@ -140,7 +140,7 @@ double hipttTimer::GBs() {
 //
 // Returns the bandwidth of the last run in GiB/s
 //
-double hipttTimer::GiBs() {
+double gputtTimer::GiBs() {
   const double iBILLION = 1073741824.0;
   double sec = seconds();
   return (sec == 0.0) ? 0.0 : (double)(curBytes)/(iBILLION*sec);
@@ -149,7 +149,7 @@ double hipttTimer::GiBs() {
 //
 // Returns the best performing tensor transpose for rank
 //
-double hipttTimer::getBest(int rank) {
+double gputtTimer::getBest(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -159,7 +159,7 @@ double hipttTimer::getBest(int rank) {
 //
 // Returns the worst performing tensor transpose for rank
 //
-double hipttTimer::getWorst(int rank) {
+double gputtTimer::getWorst(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -169,7 +169,7 @@ double hipttTimer::getWorst(int rank) {
 //
 // Returns the worst performing tensor transpose for rank
 //
-double hipttTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& permutation) {
+double gputtTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& permutation) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -181,7 +181,7 @@ double hipttTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& p
 //
 // Returns the median bandwidth for rank
 //
-double hipttTimer::getMedian(int rank) {
+double gputtTimer::getMedian(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -202,7 +202,7 @@ double hipttTimer::getMedian(int rank) {
 //
 // Returns the average bandwidth for rank
 //
-double hipttTimer::getAverage(int rank) {
+double gputtTimer::getAverage(int rank) {
   auto it = stats.find(rank);
   if (it == stats.end()) return 0.0;
   Stat& stat = it->second;
@@ -212,7 +212,7 @@ double hipttTimer::getAverage(int rank) {
 //
 // Returns all data for rank
 //
-std::vector<double> hipttTimer::getData(int rank) {
+std::vector<double> gputtTimer::getData(int rank) {
   std::vector<double> res;
   auto it = stats.find(rank);
   if (it != stats.end()) {
@@ -225,7 +225,7 @@ std::vector<double> hipttTimer::getData(int rank) {
 //
 // Returns the worst performing tensor transpose of all
 //
-double hipttTimer::getWorst(std::vector<int>& dim, std::vector<int>& permutation) {
+double gputtTimer::getWorst(std::vector<int>& dim, std::vector<int>& permutation) {
   double worstBW = 1.0e20;
   int worstRank = 0;
   for (auto it=ranks.begin(); it != ranks.end(); it++) {

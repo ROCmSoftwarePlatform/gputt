@@ -23,8 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include "hipttUtils.h"
-#include "hipttGpuModelKernel.h"
+#include "gputtUtils.h"
+#include "gputtGpuModelKernel.h"
 
 #define RESTRICT //__restrict__
 
@@ -665,35 +665,35 @@ void runCounters(const int warpSize, const int* hostPosData, const int numPosDat
   const int numWarp = numPosData/warpSize;
 
   int* devPosData;
-  hipCheck(hipMalloc(&devPosData, sizeof(int) * numPosData));
+  gpuCheck(gpuMalloc(&devPosData, sizeof(int) * numPosData));
   copy_HtoD<int>(hostPosData, devPosData, numPosData);
 
   int* dev_tran;
   int* dev_cl_full;
   int* dev_cl_part;
-  hipCheck(hipMalloc(&dev_tran, sizeof(int) * numWarp));
-  hipCheck(hipMalloc(&dev_cl_full, sizeof(int) * numWarp));
-  hipCheck(hipMalloc(&dev_cl_part, sizeof(int) * numWarp));
+  gpuCheck(gpuMalloc(&dev_tran, sizeof(int) * numWarp));
+  gpuCheck(gpuMalloc(&dev_cl_full, sizeof(int) * numWarp));
+  gpuCheck(gpuMalloc(&dev_cl_part, sizeof(int) * numWarp));
 
   int nthread = 512;
   int nblock = (numPosData - 1)/nthread + 1;
   runCountersKernel<<< nblock, nthread >>>(devPosData, numPosData,
     accWidth, cacheWidth, dev_tran, dev_cl_full, dev_cl_part);
-  hipCheck(hipGetLastError());
+  gpuCheck(gpuGetLastError());
 
   copy_DtoH<int>(dev_tran,    host_tran,    numWarp);
   copy_DtoH<int>(dev_cl_full, host_cl_full, numWarp);
   copy_DtoH<int>(dev_cl_part, host_cl_part, numWarp);
-  hipCheck(hipDeviceSynchronize());
+  gpuCheck(gpuDeviceSynchronize());
 
-  hipCheck(hipFree(dev_tran));
-  hipCheck(hipFree(dev_cl_full));
-  hipCheck(hipFree(dev_cl_part));
+  gpuCheck(gpuFree(dev_tran));
+  gpuCheck(gpuFree(dev_cl_full));
+  gpuCheck(gpuFree(dev_cl_part));
 
-  hipCheck(hipFree(devPosData));
+  gpuCheck(gpuFree(devPosData));
 }
 
-bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheWidth,
+bool gputtGpuModelKernel(gputtPlan_t& plan, const int accWidth, const int cacheWidth,
   int& gld_tran, int& gst_tran, int& gld_req, int& gst_req,
   int& cl_full_l2, int& cl_part_l2, int& cl_full_l1, int& cl_part_l1) {
 
@@ -701,7 +701,7 @@ bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheW
   TensorSplit& ts = plan.tensorSplit;
 
   MemStat* devMemStat;
-  hipCheck(hipMalloc(&devMemStat, sizeof(MemStat)));
+  gpuCheck(gpuMalloc(&devMemStat, sizeof(MemStat)));
   set_device_array<MemStat>(devMemStat, 0, 1, plan.stream);
 
   switch(ts.method) {
@@ -720,7 +720,7 @@ bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheW
 #define CALL(ICASE) case ICASE: CALL0(ICASE); break
 #include "calls.h"
         default:
-        printf("hipttGpuModelKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
+        printf("gputtGpuModelKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
         return false;
 #undef CALL
 #undef CALL0
@@ -744,7 +744,7 @@ bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheW
 #define CALL(ICASE) case ICASE: CALL0(ICASE); break
 #include "calls.h"
         default:
-        printf("hipttGpuModelKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
+        printf("gputtGpuModelKernel no template implemented for numRegStorage %d\n", lc.numRegStorage);
         return false;
 #undef CALL
 #undef CALL0
@@ -771,12 +771,12 @@ bool hipttGpuModelKernel(hipttPlan_t& plan, const int accWidth, const int cacheW
 
   }
 
-  hipCheck(hipGetLastError());
+  gpuCheck(gpuGetLastError());
 
   MemStat hostMemStat;
   copy_DtoH<MemStat>(devMemStat, &hostMemStat, 1, plan.stream);
-  hipCheck(hipDeviceSynchronize());
-  hipCheck(hipFree(devMemStat));
+  gpuCheck(gpuDeviceSynchronize());
+  gpuCheck(gpuFree(devMemStat));
 
   gld_tran   = hostMemStat.gld_tran;
   gst_tran   = hostMemStat.gst_tran;

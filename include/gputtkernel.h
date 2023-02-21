@@ -24,13 +24,13 @@ SOFTWARE.
 *******************************************************************************/
 #ifndef CUTTKERNEL_H
 #define CUTTKERNEL_H
-#include "hipttplan.h"
+#include "gputtplan.h"
 
-void hipttKernelSetSharedMemConfig();
+void gputtKernelSetSharedMemConfig();
 
-int hipttKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
-             const int deviceID, const hipDeviceProp_t& prop, LaunchConfig& lc);
+int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
+             const int deviceID, const gpuDeviceProp_t& prop, LaunchConfig& lc);
 
-bool hipttKernel(hipttPlan_t& plan, const void* dataIn, void* dataOut, const void* alpha, const void* beta);
+bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const void* alpha, const void* beta);
 
 #endif // CUTTKERNEL_H

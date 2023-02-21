@@ -30,21 +30,21 @@ SOFTWARE.
 #include <cmath>
 #include <cctype>
 #include <random>
-#include "hiptt.h"
-#include "hipttUtils.h"
+#include "gputt.h"
+#include "gputtUtils.h"
 #include "TensorTester.h"
-#include "hipttTimer.h"
-#include "hipttMemcpy.h"
+#include "gputtTimer.h"
+#include "gputtMemcpy.h"
 #include "int_vector.h"
 
 #define MILLION 1000000
 #define BILLION 1000000000
 
 //
-// Error checking wrapper for hiptt
+// Error checking wrapper for gputt
 //
-#define hipttCheck(stmt) do {                                 \
-  hipttResult err = stmt;                            \
+#define gputtCheck(stmt) do {                                 \
+  gputtResult err = stmt;                            \
   if (err != CUTT_SUCCESS) {                          \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
@@ -56,8 +56,8 @@ char* dataOut = NULL;
 size_t dataSize = 0;
 TensorTester* tester = NULL;
 
-hipttTimer* timer;
-bool use_hipttPlanMeasure;
+gputtTimer* timer;
+bool use_gputtPlanMeasure;
 bool use_plantimer;
 
 std::default_random_engine generator;
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
   unsigned seed = unsigned (std::time(0));
   bool arg_ok = true;
   int benchID = 0;
-  use_hipttPlanMeasure = false;
+  use_gputtPlanMeasure = false;
   use_plantimer = false;
   int elemsize = 8;
   std::vector<int> dimIn;
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
         sscanf(argv[i+1], "%d", &benchID);
         i += 2;
       } else if (strcmp(argv[i], "-measure") == 0) {
-        use_hipttPlanMeasure = true;
+        use_gputtPlanMeasure = true;
         i++;
       } else if (strcmp(argv[i], "-seed") == 0) {
         sscanf(argv[i+1], "%u", &seed);
@@ -137,10 +137,10 @@ int main(int argc, char *argv[]) {
   }
 
   if (!arg_ok) {
-    printf("hiptt_bench [options]\n");
+    printf("gputt_bench [options]\n");
     printf("Options:\n");
     printf("-device [int]    : GPU ID (default is 0)\n");
-    printf("-measure         : use hipttPlanMeasure (default is hipttPlan)\n");
+    printf("-measure         : use gputtPlanMeasure (default is gputtPlan)\n");
     printf("-plantimer       : planning is timed (default is no)\n");
     printf("-seed [int]      : seed value for random number generator (default is system timer)\n");
     printf("-elemsize [int]  : size of elements in bytes, 4 or 8. (default is 8)\n");
@@ -151,26 +151,26 @@ int main(int argc, char *argv[]) {
   }
 
   if (gpuid >= 0) {
-    hipCheck(hipSetDevice(gpuid));
+    gpuCheck(gpuSetDevice(gpuid));
   }
 
-  hipCheck(hipDeviceReset());
+  gpuCheck(gpuDeviceReset());
   if (elemsize == 4) {
-    hipDeviceSetSharedMemConfig(hipSharedMemBankSizeFourByte); // may fail, if unsupported
+    gpuDeviceSetSharedMemConfig(gpuSharedMemBankSizeFourByte); // may fail, if unsupported
   } else {
-    hipDeviceSetSharedMemConfig(hipSharedMemBankSizeEightByte); // may fail, if unsupported
+    gpuDeviceSetSharedMemConfig(gpuSharedMemBankSizeEightByte); // may fail, if unsupported
   }
 
   printDeviceInfo();
   printf("CPU using vector type %s of length %d\n", INT_VECTOR_TYPE, INT_VECTOR_LEN);
 
-  timer = new hipttTimer(elemsize);
+  timer = new gputtTimer(elemsize);
 
   dataSize = (elemsize == 4) ? 420*MILLION : 370*MILLION;
 
   // Allocate device data, 100M elements
-  hipCheck(hipMalloc(&dataIn, sizeof(char) * dataSize * (size_t)elemsize));
-  hipCheck(hipMalloc(&dataOut, sizeof(char) * dataSize * (size_t)elemsize));
+  gpuCheck(gpuMalloc(&dataIn, sizeof(char) * dataSize * (size_t)elemsize));
+  gpuCheck(gpuMalloc(&dataOut, sizeof(char) * dataSize * (size_t)elemsize));
 
   // Create tester
   tester = new TensorTester();
@@ -355,17 +355,17 @@ benchOK:
 fail:
   printf("bench FAIL\n");
 end:
-  hipCheck(hipFree(dataIn));
-  hipCheck(hipFree(dataOut));
+  gpuCheck(gpuFree(dataIn));
+  gpuCheck(gpuFree(dataOut));
   delete tester;
 
   printf("seed %u\n", seed);
 
   delete timer;
 
-  hipCheck(hipDeviceSynchronize());
+  gpuCheck(gpuDeviceSynchronize());
 
-  hipCheck(hipDeviceReset());
+  gpuCheck(gpuDeviceReset());
   return 0;
 }
 
@@ -791,15 +791,15 @@ bool bench_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
   printf("permutation\n");
   printVec(permutation);
 
-  hipttHandle plan;
+  gputtHandle plan;
   std::chrono::high_resolution_clock::time_point plan_start;
   if (use_plantimer) {
     plan_start = std::chrono::high_resolution_clock::now();
   }
-  if (use_hipttPlanMeasure) {
-    hipttCheck(hipttPlanMeasure(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0, dataIn, dataOut));
+  if (use_gputtPlanMeasure) {
+    gputtCheck(gputtPlanMeasure(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0, dataIn, dataOut));
   } else {
-    hipttCheck(hipttPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
+    gputtCheck(gputtPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
   }
   if (use_plantimer) {
     std::chrono::high_resolution_clock::time_point plan_end;
@@ -810,16 +810,16 @@ bool bench_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
 
   for (int i=0;i < 4;i++) {
     set_device_array<T>((T *)dataOut, -1, vol);
-    hipCheck(hipDeviceSynchronize());
+    gpuCheck(gpuDeviceSynchronize());
 
     timer->start(dim, permutation);
-    hipttCheck(hipttExecute(plan, dataIn, dataOut));
+    gputtCheck(gputtExecute(plan, dataIn, dataOut));
     timer->stop();
 
     printf("wall time %lf ms %lf GB/s\n", timer->seconds()*1000.0, timer->GBs());
   }
 
-  hipttCheck(hipttDestroy(plan));
+  gputtCheck(gputtDestroy(plan));
   return tester->checkTranspose<T>(rank, dim.data(), permutation.data(), (T *)dataOut);
 }
 
@@ -840,10 +840,10 @@ bool bench_memcpy(int numElem) {
   std::vector<int> permutation(1, 0);
 
   {
-    hipttTimer timer(sizeof(T));
+    gputtTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
-      hipCheck(hipDeviceSynchronize());
+      gpuCheck(gpuDeviceSynchronize());
       timer.start(dim, permutation);
       scalarCopy<T>(numElem, (T *)dataIn, (T *)dataOut, 0);
       timer.stop();
@@ -854,10 +854,10 @@ bool bench_memcpy(int numElem) {
   }
 
   {
-    hipttTimer timer(sizeof(T));
+    gputtTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
-      hipCheck(hipDeviceSynchronize());
+      gpuCheck(gpuDeviceSynchronize());
       timer.start(dim, permutation);
       vectorCopy<T>(numElem, (T *)dataIn, (T *)dataOut, 0);
       timer.stop();
@@ -868,10 +868,10 @@ bool bench_memcpy(int numElem) {
   }
 
   {
-    hipttTimer timer(sizeof(T));
+    gputtTimer timer(sizeof(T));
     for (int i=0;i < 4;i++) {
       set_device_array<T>((T *)dataOut, -1, numElem);
-      hipCheck(hipDeviceSynchronize());
+      gpuCheck(gpuDeviceSynchronize());
       timer.start(dim, permutation);
       memcpyFloat(numElem*sizeof(T)/sizeof(float), (float *)dataIn, (float *)dataOut, 0);
       timer.stop();
@@ -886,13 +886,13 @@ bool bench_memcpy(int numElem) {
 
 void printDeviceInfo() {
   int deviceID;
-  hipCheck(hipGetDevice(&deviceID));
-  hipDeviceProp_t prop;
-  hipCheck(hipGetDeviceProperties(&prop, deviceID));
-  hipSharedMemConfig pConfig;
-  hipCheck(hipDeviceGetSharedMemConfig(&pConfig));
+  gpuCheck(gpuGetDevice(&deviceID));
+  gpuDeviceProp_t prop;
+  gpuCheck(gpuGetDeviceProperties(&prop, deviceID));
+  gpuSharedMemConfig pConfig;
+  gpuCheck(gpuDeviceGetSharedMemConfig(&pConfig));
   int shMemBankSize = 4;
-  if (pConfig == hipSharedMemBankSizeEightByte) shMemBankSize = 8;
+  if (pConfig == gpuSharedMemBankSizeEightByte) shMemBankSize = 8;
   double mem_BW = (double)(prop.memoryClockRate*2*(prop.memoryBusWidth/8))/1.0e6;
   printf("Using %s SM version %d.%d\n", prop.name, prop.major, prop.minor);
   printf("Clock %1.3lfGhz numSM %d ECC %d mem BW %1.2lfGB/s shMemBankSize %dB\n", (double)prop.clockRate/1e6,
