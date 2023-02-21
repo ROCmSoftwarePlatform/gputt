@@ -8,9 +8,9 @@ This code implements the following tensor transposing methods: `Trivial`, `Tiled
 
 Prerequisites:
 
- * C++ compiler with C++14 compitability
- * CUDA compiler
- * Kepler (SM 3.0) or above NVIDIA GPU
+ * C++ compiler with C++17 compitability
+ * HIP or CUDA compiler
+ * NVIDIA or AMD GPU (sm30 or above)
 
 To compile hipTT library as well as test cases and benchmarks, simply do:
 
@@ -23,13 +23,13 @@ make -j12
 
 This will create the library itself:
 
- * include/hiptt.h
- * libhiptt.a
+ * `include/hiptt.h`
+ * `libhiptt.a`
 
 as well as the test and benchmarks
 
- * hiptt_test
- * hiptt_bench
+ * `hiptt_test`
+ * `hiptt_bench`
 
 In order to use hipTT, you only need the include `include/hiptt.h` and the library `lib/libhiptt.a` files.
 
