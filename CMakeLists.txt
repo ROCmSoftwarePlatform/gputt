@@ -28,7 +28,7 @@ message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
 set(PYBIND11_PYTHON_VERSION ${Python3_VERSION})
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/pybind11)
 
-file(GLOB ${PROJECT_NAME}_SOURCE_FILES "src/*.cu" "include/*.h")
+file(GLOB ${PROJECT_NAME}_SOURCE_FILES "src/*.cu")
 file(GLOB ${PROJECT_NAME}_bench_SOURCE_FILES "src/bench/bench.cu")
 file(GLOB ${PROJECT_NAME}_test_SOURCE_FILES "src/test/test.cu")
 
@@ -38,7 +38,6 @@ check_language(CUDA)
 
 if(CMAKE_HIP_COMPILER)
 
-# enable HIP
 enable_language(HIP)
 
 if(NOT DEFINED HIP_PATH)
@@ -58,6 +57,8 @@ set_source_files_properties(${${PROJECT_NAME}_bench_SOURCE_FILES} PROPERTIES LAN
 set_source_files_properties(${${PROJECT_NAME}_test_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
 
 elseif(CMAKE_CUDA_COMPILER)
+
+enable_language(CUDA)
 
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -O0" ${CMAKE_CUDA_FLAGS})
 
@@ -80,7 +81,9 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+if(CMAKE_HIP_COMPILER)
 target_link_libraries(${PROJECT_NAME} hip::amdhip64)
+endif()
 
 add_executable(${PROJECT_NAME}_bench ${${PROJECT_NAME}_bench_SOURCE_FILES})
 target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_17)
