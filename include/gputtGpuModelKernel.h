@@ -22,8 +22,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#ifndef CUTTGPUMODELKERNEL_H
-#define CUTTGPUMODELKERNEL_H
+#ifndef GPUTTGPUMODELKERNEL_H
+#define GPUTTGPUMODELKERNEL_H
 #include "gputtplan.h"
 
 void runCounters(const int warpSize, const int* hostPosData, const int numPosData,
@@ -33,4 +33,4 @@ bool gputtGpuModelKernel(gputtPlan_t& plan, const int accWidth, const int cacheW
   int& gld_tran, int& gst_tran, int& gld_req, int& gst_req,
   int& cl_full_l2, int& cl_part_l2, int& cl_full_l1, int& cl_part_l1);
 
-#endif // CUTTGPUMODELKERNEL_H
+#endif // GPUTTGPUMODELKERNEL_H

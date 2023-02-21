@@ -22,8 +22,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#ifndef CUTTGPUMODEL_H
-#define CUTTGPUMODEL_H
+#ifndef GPUTTGPUMODEL_H
+#define GPUTTGPUMODEL_H
 
 #include <vector>
 #include "gputtTypes.h"
@@ -85,4 +85,4 @@ double cyclesTiled(const bool isCopy, const size_t sizeofType, const gpuDevicePr
 
 bool testCounters(const int warpSize, const int accWidth, const int cacheWidth);
 
-#endif // CUTTGPUMODEL_H
+#endif // GPUTTGPUMODEL_H

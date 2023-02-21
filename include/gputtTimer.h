@@ -23,8 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#ifndef CUTTTIMER_H
-#define CUTTTIMER_H
+#ifndef GPUTTTIMER_H
+#define GPUTTTIMER_H
 
 #include <vector>
 #include <chrono>
@@ -124,4 +124,4 @@ public:
   }
 };
 
-#endif // CUTTTIMER_H
+#endif // GPUTTTIMER_H

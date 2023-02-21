@@ -25,12 +25,12 @@ const char* gputtErrorString(gputtResult result)
 
 	switch (result)
 	{
-	case CUTT_SUCCESS: return gputtSuccess;
-	case CUTT_INVALID_PLAN: return gputtInvalidPlan;
-	case CUTT_INVALID_PARAMETER: return gputtInvalidParameter;
-	case CUTT_INVALID_DEVICE: return gputtInvalidDevice;
-	case CUTT_INTERNAL_ERROR: return gputtInternalError;
-	case CUTT_UNDEFINED_ERROR: return gputtUndefinedError;
+	case GPUTT_SUCCESS: return gputtSuccess;
+	case GPUTT_INVALID_PLAN: return gputtInvalidPlan;
+	case GPUTT_INVALID_PARAMETER: return gputtInvalidParameter;
+	case GPUTT_INVALID_DEVICE: return gputtInvalidDevice;
+	case GPUTT_INTERNAL_ERROR: return gputtInternalError;
+	case GPUTT_UNDEFINED_ERROR: return gputtUndefinedError;
 	}
 
 	return gputtUnknownError;
@@ -176,7 +176,7 @@ public :
 			planInitialized = true;
 		}
 
-		if (initStatus != CUTT_SUCCESS)
+		if (initStatus != GPUTT_SUCCESS)
 		{
 			std::stringstream ss;
 			ss << "gpuTT error: ";
@@ -197,7 +197,7 @@ public :
 			beta = &vbeta;
 		}
 		gputtResult status = gputtExecute(plan, igpuarray, ogpuarray, alpha, beta);
-		if (status != CUTT_SUCCESS)
+		if (status != GPUTT_SUCCESS)
 		{
 			std::stringstream ss;
 			ss << "gpuTT error: ";
@@ -209,7 +209,7 @@ public :
 
 } // namespace
 
-extern "C" CUTT_API void gputt_init_python(void* parent_, int submodule, const char* apikey)
+extern "C" GPUTT_API void gputt_init_python(void* parent_, int submodule, const char* apikey)
 {
 	if (!parent_) return;
 

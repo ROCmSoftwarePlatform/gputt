@@ -22,8 +22,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#ifndef CUTTPLAN_H
-#define CUTTPLAN_H
+#ifndef GPUTTPLAN_H
+#define GPUTTPLAN_H
 
 #include "gpu_runtime.h"
 #include <list>
@@ -222,4 +222,4 @@ void reduceRanks(const int rank, const int* dim, const int* permutation,
 
 std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& plans);
 
-#endif // CUTTPLAN_H
+#endif // GPUTTPLAN_H

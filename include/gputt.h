@@ -22,32 +22,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#ifndef CUTT_H
-#define CUTT_H
+#ifndef GPUTT_H
+#define GPUTT_H
 
 #include "gpu_runtime.h" // gpuStream_t
 
 #ifdef _WIN32
 #ifdef gputt_EXPORTS
-#define CUTT_API __declspec(dllexport)
+#define GPUTT_API __declspec(dllexport)
 #else
-#define CUTT_API __declspec(dllimport)
+#define GPUTT_API __declspec(dllimport)
 #endif
 #else // _WIN32
-#define CUTT_API
+#define GPUTT_API
 #endif // _WIN32
 
 // Handle type that is used to store and access gputt plans
 typedef unsigned int gputtHandle;
 
 // Return value
-typedef enum CUTT_API gputtResult_t {
-  CUTT_SUCCESS,            // Success
-  CUTT_INVALID_PLAN,       // Invalid plan handle
-  CUTT_INVALID_PARAMETER,  // Invalid input parameter
-  CUTT_INVALID_DEVICE,     // Execution tried on device different than where plan was created
-  CUTT_INTERNAL_ERROR,     // Internal error
-  CUTT_UNDEFINED_ERROR,    // Undefined error
+typedef enum GPUTT_API gputtResult_t {
+  GPUTT_SUCCESS,            // Success
+  GPUTT_INVALID_PLAN,       // Invalid plan handle
+  GPUTT_INVALID_PARAMETER,  // Invalid input parameter
+  GPUTT_INVALID_DEVICE,     // Execution tried on device different than where plan was created
+  GPUTT_INTERNAL_ERROR,     // Internal error
+  GPUTT_UNDEFINED_ERROR,    // Undefined error
 } gputtResult;
 
 //
@@ -64,7 +64,7 @@ typedef enum CUTT_API gputtResult_t {
 // Returns
 // Success/unsuccess code
 // 
-gputtResult CUTT_API gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+gputtResult GPUTT_API gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   gpuStream_t stream);
 
 //
@@ -83,7 +83,7 @@ gputtResult CUTT_API gputtPlan(gputtHandle* handle, int rank, const int* dim, co
 // Returns
 // Success/unsuccess code
 // 
-gputtResult CUTT_API gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
+gputtResult GPUTT_API gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   gpuStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
 //
@@ -95,7 +95,7 @@ gputtResult CUTT_API gputtPlanMeasure(gputtHandle* handle, int rank, const int* 
 // Returns
 // Success/unsuccess code
 //
-gputtResult CUTT_API gputtDestroy(gputtHandle handle);
+gputtResult GPUTT_API gputtDestroy(gputtHandle handle);
 
 //
 // Execute plan out-of-place; performs a tensor transposition of the form \f[ \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha * \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta * \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
@@ -110,7 +110,7 @@ gputtResult CUTT_API gputtDestroy(gputtHandle handle);
 // Returns
 // Success/unsuccess code
 //
-gputtResult CUTT_API gputtExecute(gputtHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
+gputtResult GPUTT_API gputtExecute(gputtHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
 
-#endif // CUTT_H
+#endif // GPUTT_H
 

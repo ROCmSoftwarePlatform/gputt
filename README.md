@@ -81,7 +81,7 @@ Here is an example code.
 //
 #define hipttCheck(stmt) do {                                 \
   hipttResult err = stmt;                            \
-  if (err != CUTT_SUCCESS) {                          \
+  if (err != GPUTT_SUCCESS) {                          \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
   }                                                  \

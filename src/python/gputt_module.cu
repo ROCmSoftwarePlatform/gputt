@@ -5,7 +5,7 @@
 
 namespace py = pybind11;
 
-extern "C" CUTT_API void gputt_init_python(void* parent, int submodule, const char* apikey);
+extern "C" GPUTT_API void gputt_init_python(void* parent, int submodule, const char* apikey);
 
 PYBIND11_MODULE(gputt, gputt)
 {

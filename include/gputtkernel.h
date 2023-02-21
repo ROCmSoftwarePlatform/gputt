@@ -22,8 +22,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#ifndef CUTTKERNEL_H
-#define CUTTKERNEL_H
+#ifndef GPUTTKERNEL_H
+#define GPUTTKERNEL_H
 #include "gputtplan.h"
 
 void gputtKernelSetSharedMemConfig();
@@ -33,4 +33,4 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
 
 bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const void* alpha, const void* beta);
 
-#endif // CUTTKERNEL_H
+#endif // GPUTTKERNEL_H
