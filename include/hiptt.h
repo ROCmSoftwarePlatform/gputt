@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef CUTT_H
 #define CUTT_H
 
-#include <hip/hip_runtime.h> // hipStream_t
+#include "gpu_runtime.h" // hipStream_t
 
 #ifdef _WIN32
 #ifdef hiptt_EXPORTS

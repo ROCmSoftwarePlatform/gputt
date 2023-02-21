@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef CUDAMEMCPY_H
 #define CUDAMEMCPY_H
 
-#include <hip/hip_runtime.h>
+#include "gpu_runtime.h"
 
 template <typename T> void scalarCopy(const int n, const T* data_in, T* data_out, hipStream_t stream);
 template <typename T> void vectorCopy(const int n, T* data_in, T* data_out, hipStream_t stream);

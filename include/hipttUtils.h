@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef CUDAUTILS_H
 #define CUDAUTILS_H
 
-#include <hip/hip_runtime.h>
+#include "gpu_runtime.h"
 #include <cstdio>
 
 //
