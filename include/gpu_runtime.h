@@ -1,5 +1,5 @@
-#ifdef __HIP_PLATFORM_HCC__
-#include <gpu/gpu_runtime.h>
+#ifdef __HIPCC__
+#include <hip/hip_runtime.h>
 #define gpuDeviceGetSharedMemConfig hipDeviceGetSharedMemConfig
 #define gpuDeviceProp_t hipDeviceProp_t
 #define gpuDeviceReset hipDeviceReset
