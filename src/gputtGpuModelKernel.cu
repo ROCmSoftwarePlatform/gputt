@@ -28,7 +28,7 @@ SOFTWARE.
 
 #define RESTRICT //__restrict__
 
-#ifdef __HIP_PLATFORM_HCC__
+#ifdef __HIPCC__
 #define __any_sync(mask, ...) __any(__VA_ARGS__)
 #define __ballot_sync(mask, ...) __ballot(__VA_ARGS__)
 #define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)

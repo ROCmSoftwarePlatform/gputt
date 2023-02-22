@@ -29,7 +29,7 @@ SOFTWARE.
 #include "gputtUtils.h"
 #include "TensorTester.h"
 
-#ifdef __HIP_PLATFORM_HCC__
+#ifdef __HIPCC__
 #define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)
 #endif
 
