@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-project(gputt CXX)
+project(gputt LANGUAGES CXX VERSION 0.1)
 
 if ("x" STREQUAL "x${CMAKE_BUILD_TYPE}")
 set(CMAKE_BUILD_TYPE Release)
@@ -96,17 +96,22 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/gputt>  
+    $<INSTALL_INTERFACE:include/gputt>)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(CMAKE_HIP_COMPILER)
 target_link_libraries(${PROJECT_NAME} hip::amdhip64)
 endif()
 
 add_executable(${PROJECT_NAME}_bench ${${PROJECT_NAME}_bench_SOURCE_FILES})
 target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_17)
+target_include_directories(${PROJECT_NAME}_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}_bench PUBLIC ${PROJECT_NAME})
 
 add_executable(${PROJECT_NAME}_test ${${PROJECT_NAME}_test_SOURCE_FILES})
 target_compile_features(${PROJECT_NAME}_test PUBLIC cxx_std_17)
+target_include_directories(${PROJECT_NAME}_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}_test PUBLIC ${PROJECT_NAME})
 
 if (GPUTT_BUILD_PYTHON)
@@ -118,8 +123,31 @@ target_link_libraries(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME}_python PROPERTIES LIBRARY_OUTPUT_NAME "${PROJECT_NAME}")
 endif()
 
-install(TARGETS ${PROJECT_NAME} ARCHIVE DESTINATION . LIBRARY DESTINATION .)
-install(FILES include/gputt.h include/gputt_runtime.h DESTINATION include)
+set(GPUTT_TARGETS ${PROJECT_NAME})
 if (GPUTT_BUILD_PYTHON)
-install(TARGETS ${PROJECT_NAME}_python ARCHIVE DESTINATION . LIBRARY DESTINATION .)
+list(APPEND GPUTT_TARGETS ${PROJECT_NAME}_python)
 endif()
+install(TARGETS ${GPUTT_TARGETS} EXPORT gputt-targets ARCHIVE DESTINATION . LIBRARY DESTINATION .)
+install(FILES include/gputt/gputt.h include/gputt/gputt_runtime.h DESTINATION include/gputt)
+
+install(EXPORT gputt-targets DESTINATION lib/cmake/gputt)
+
+include(CMakePackageConfigHelpers)
+
+include(CMakePackageConfigHelpers)
+# generate the config file that includes the exports
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/gputtConfig.cmake"
+  INSTALL_DESTINATION "lib/cmake/gputt"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/gputtConfigVersion.cmake"
+  VERSION "${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR}"
+  COMPATIBILITY AnyNewerVersion)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/gputtConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/gputtConfigVersion.cmake
+  DESTINATION lib/cmake/gputt)
