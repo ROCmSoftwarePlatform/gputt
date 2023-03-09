@@ -119,7 +119,7 @@ set_target_properties(${PROJECT_NAME}_python PROPERTIES LIBRARY_OUTPUT_NAME "${P
 endif()
 
 install(TARGETS ${PROJECT_NAME} ARCHIVE DESTINATION . LIBRARY DESTINATION .)
-install(FILES include/gputt.h DESTINATION include)
+install(FILES include/gputt.h include/gputt_runtime.h DESTINATION include)
 if (GPUTT_BUILD_PYTHON)
 install(TARGETS ${PROJECT_NAME}_python ARCHIVE DESTINATION . LIBRARY DESTINATION .)
 endif()

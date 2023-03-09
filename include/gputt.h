@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef GPUTT_H
 #define GPUTT_H
 
-#include "gpu_runtime.h" // gpuStream_t
+#include "gputt_runtime.h" // gpuStream_t
 
 #ifdef _WIN32
 #ifdef gputt_EXPORTS

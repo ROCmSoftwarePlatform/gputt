@@ -37,7 +37,7 @@ SOFTWARE.
 #define CUDA_EVENT_TIMER
 // -------------------------------------------------
 #ifdef CUDA_EVENT_TIMER
-#include "gpu_runtime.h"
+#include "gputt_runtime.h"
 #endif
 
 //

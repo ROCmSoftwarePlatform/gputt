@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef GPUTTPLAN_H
 #define GPUTTPLAN_H
 
-#include "gpu_runtime.h"
+#include "gputt_runtime.h"
 #include <list>
 #include <vector>
 #include "gputtTypes.h"

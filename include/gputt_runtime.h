@@ -1,3 +1,6 @@
+#ifndef GPUTT_RUNTIME_H
+#define GPUTT_RUNTIME_H
+
 #ifdef __HIPCC__
 #include <hip/hip_runtime.h>
 #define gpuDeviceGetSharedMemConfig hipDeviceGetSharedMemConfig
@@ -70,4 +73,6 @@
 #define gpuStreamDestroy cudaStreamDestroy
 #define gpuSuccess cudaSuccess
 #endif // __HIP_PLATFORM_HCC__
+
+#endif // GPUTT_RUNTIME_H
 
