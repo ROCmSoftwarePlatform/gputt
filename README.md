@@ -30,15 +30,15 @@ cmake -DCMAKE_CXX_COMPILER=hipcc ..
 
 This will create the library itself:
 
- * `include/hiptt.h`
- * `libhiptt.a`
+ * `include/gputt.h`
+ * `libgputt.a`
 
 as well as the test and benchmarks
 
- * `hiptt_test`
- * `hiptt_bench`
+ * `gputt_test`
+ * `gputt_bench`
 
-In order to use hipTT, you only need the include `include/hiptt.h` and the library `lib/libhiptt.a` files.
+In order to use hipTT, you only need the include `include/gputt.h` and the library `lib/libgputt.a` files.
 
 ## Running tests and benchmarks
 
@@ -46,7 +46,7 @@ Tests and benchmark executables are in the bin/ directory and they can be run wi
 Options to the test executable lets you choose the device ID on which to run:
 
 ```
-hiptt_test [options]
+gputt_test [options]
 Options:
 -device gpuid : use GPU with ID gpuid
 ```
@@ -56,15 +56,15 @@ plans that are chosen optimally by measuring the performance of every possible i
 choosing the best one.
 
 ```
-hiptt_bench [options]
+gputt_bench [options]
 Options:
 -device gpuid : use GPU with ID gpuid
--measure      : use hipttPlanMeasure (default is hipttPlan)
+-measure      : use gputtPlanMeasure (default is gputtPlan)
 ```
 
 ## Performance
 
-hipTT was designed with performance as the main goal. Here are performance benchmarks for a random set of tensors with 200M `double` elements with ranks 2 to 7. The benchmarks were run with the measurement flag on `./hiptt_bench -measure -bench 3`.
+hipTT was designed with performance as the main goal. Here are performance benchmarks for a random set of tensors with 200M `double` elements with ranks 2 to 7. The benchmarks were run with the measurement flag on `./gputt_bench -measure -bench 3`.
 
 ![k20x](doc/k20x_bench.png)
 
@@ -81,13 +81,13 @@ user first creates a plan for the transpose and then executes that plan.
 Here is an example code.
 
 ```c++
-#include <hiptt.h>
+#include <gputt.h>
 
 //
-// Error checking wrapper for hiptt
+// Error checking wrapper for gputt
 //
-#define hipttCheck(stmt) do {                                 \
-  hipttResult err = stmt;                            \
+#define gputtCheck(stmt) do {                                 \
+  gputtResult err = stmt;                            \
   if (err != GPUTT_SUCCESS) {                          \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
@@ -106,19 +106,19 @@ int main() {
   // double* odata : size product(dim)
 
   // Option 1: Create plan on NULL stream and choose implementation based on heuristics
-  hipttHandle plan;
-  hipttCheck(hipttPlan(&plan, 4, dim, permutation, sizeof(double), 0));
+  gputtHandle plan;
+  gputtCheck(gputtPlan(&plan, 4, dim, permutation, sizeof(double), 0));
 
   // Option 2: Create plan on NULL stream and choose implementation based on performance measurements
-  // hipttCheck(hipttPlanMeasure(&plan, 4, dim, permutation, sizeof(double), 0, idata, odata));
+  // gputtCheck(gputtPlanMeasure(&plan, 4, dim, permutation, sizeof(double), 0, idata, odata));
 
   // Execute plan
-  hipttCheck(hipttExecute(plan, idata, odata));
+  gputtCheck(gputtExecute(plan, idata, odata));
 
   ... do stuff with your output and deallocate data ...
 
   // Destroy plan
-  hipttCheck(hipttDestroy(plan));
+  gputtCheck(gputtDestroy(plan));
 
   return 0;
 }
@@ -146,7 +146,7 @@ for high-rank tensors.
 // Returns
 // Success/unsuccess code
 // 
-hipttResult hipttPlan(hipttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
+gputtResult gputtPlan(gputtHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
   cudaStream_t stream);
 
 //
@@ -165,7 +165,7 @@ hipttResult hipttPlan(hipttHandle* handle, int rank, int* dim, int* permutation,
 // Returns
 // Success/unsuccess code
 // 
-hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
+gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, int* dim, int* permutation, size_t sizeofType,
   cudaStream_t stream, void* idata, void* odata);
   
 //
@@ -177,7 +177,7 @@ hipttResult hipttPlanMeasure(hipttHandle* handle, int rank, int* dim, int* permu
 // Returns
 // Success/unsuccess code
 //
-hipttResult hipttDestroy(hipttHandle handle);
+gputtResult gputtDestroy(gputtHandle handle);
 
 //
 // Execute plan out-of-place
@@ -192,7 +192,7 @@ hipttResult hipttDestroy(hipttHandle handle);
 // Returns
 // Success/unsuccess code
 //
-hipttResult hipttExecute(hipttHandle handle, void* idata, void* odata);
+gputtResult gputtExecute(gputtHandle handle, void* idata, void* odata);
 ```
 
 ## Known Bugs
