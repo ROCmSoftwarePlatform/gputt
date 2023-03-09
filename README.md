@@ -8,6 +8,7 @@ This code implements the following tensor transposing methods: `Trivial`, `Tiled
 
 Prerequisites:
 
+ * CMake, 3.16+
  * C++ compiler with C++17 compitability
  * HIP or CUDA compiler
  * NVIDIA or AMD GPU (sm30 or above)
@@ -19,6 +20,12 @@ mkdir build
 cd build
 cmake ..
 make -j12
+```
+
+In order to compile with CMake < 3.24, C++ compiler must be specified explicitly:
+
+```
+cmake -DCMAKE_CXX_COMPILER=hipcc ..
 ```
 
 This will create the library itself:

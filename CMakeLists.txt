@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 project(gputt CXX)
 
 if ("x" STREQUAL "x${CMAKE_BUILD_TYPE}")
@@ -36,12 +36,20 @@ file(GLOB ${PROJECT_NAME}_bench_SOURCE_FILES "src/bench/bench.cu")
 file(GLOB ${PROJECT_NAME}_test_SOURCE_FILES "src/test/test.cu")
 
 include(CheckLanguage)
+if (CMAKE_VERSION GREATER_EQUAL 3.24)
 check_language(HIP)
+else()
+message(WARNING "Prior to 3.24, the HIP language is not fully integrated into CMake, "
+	"we have to use more ugly ways...")
+set(HIP_COMPAT_ENABLED 1)
+endif()
 check_language(CUDA)
 
-if(CMAKE_HIP_COMPILER)
+if(CMAKE_HIP_COMPILER OR HIP_COMPAT_ENABLED)
 
+if (NOT HIP_COMPAT_ENABLED)
 enable_language(HIP)
+endif()
 
 if(NOT DEFINED HIP_PATH)
     if(NOT DEFINED ENV{HIP_PATH})
@@ -55,9 +63,14 @@ find_package(hip REQUIRED)
 
 set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodeview" ${CMAKE_HIP_FLAGS})
 
-set_source_files_properties(${${PROJECT_NAME}_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
-set_source_files_properties(${${PROJECT_NAME}_bench_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
-set_source_files_properties(${${PROJECT_NAME}_test_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
+if (HIP_COMPAT_ENABLED)
+set(HIP_LANGUAGE CXX)
+else()
+set(HIP_LANGUAGE HIP)
+endif()
+set_source_files_properties(${${PROJECT_NAME}_SOURCE_FILES} PROPERTIES LANGUAGE ${HIP_LANGUAGE})
+set_source_files_properties(${${PROJECT_NAME}_bench_SOURCE_FILES} PROPERTIES LANGUAGE ${HIP_LANGUAGE})
+set_source_files_properties(${${PROJECT_NAME}_test_SOURCE_FILES} PROPERTIES LANGUAGE ${HIP_LANGUAGE})
 
 elseif(CMAKE_CUDA_COMPILER)
 
