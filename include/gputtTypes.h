@@ -22,24 +22,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#ifndef GPUTTTYPES_H
-#define GPUTTTYPES_H
+#ifndef GPUTT_TYPES_H
+#define GPUTT_TYPES_H
 
 #define MAX_REG_STORAGE 8
 
-struct TensorConv {
-  int c;
-  int d;
-  int ct;
+// Tensor conversion constants
+struct TensorConv
+{
+	int c;
+	int d;
+	int ct;
 };
 
-struct TensorConvInOut {
-  int c_in;
-  int d_in;
-  int ct_in;
-  int c_out;
-  int d_out;
-  int ct_out;
+// Tensor conversion constants input & output pair
+// TODO Use nested struct TensorConv instead
+struct TensorConvInOut
+{
+	int c_in;
+	int d_in;
+	int ct_in;
+
+	int c_out;
+	int d_out;
+	int ct_out;
 };
 
-#endif // GPUTTTYPES_H
+#endif // GPUTT_TYPES_H
+

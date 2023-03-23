@@ -23,9 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-//
-// Testing utilities
-//
 #include "gputtUtils.h"
 #include "TensorTester.h"
 
@@ -33,95 +30,104 @@ SOFTWARE.
 #define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)
 #endif
 
-__global__ void setTensorCheckPatternKernel(unsigned int* data, unsigned int ndata) {
-  for (unsigned int i = threadIdx.x + blockIdx.x*blockDim.x;i < ndata;i += blockDim.x*gridDim.x) {
-    data[i] = i;
-  }
+// Fill tensor with test a data: simple growing index.
+__global__ void setTensorCheckPatternKernel(unsigned int* data, unsigned int ndata)
+{
+	for (unsigned int i = threadIdx.x + blockIdx.x  *blockDim.x; i < ndata; i += blockDim.x * gridDim.x)
+		data[i] = i;
 }
 
+// Check the transposed kernel elements against the reference.
+// TODO More detail
 template<typename T>
-__global__ void checkTransposeKernel(T* data, unsigned int ndata, int rank, TensorConv* glTensorConv,
-  TensorError_t* glError, int* glFail) {
+__global__ void checkTransposeKernel(
+	T* data, unsigned int ndata, int rank, TensorConv* glTensorConv,
+	TensorError_t* glError, int* glFail)
+{
+	extern __shared__ unsigned int shPos[];
 
-  extern __shared__ unsigned int shPos[];
+	// Each warp lane takes care of one dimension
+	// (therefore, this algo is limited by warpSize).
+	const int warpLane = threadIdx.x & (warpSize - 1);
+	TensorConv tc;
+	if (warpLane < rank)
+		tc = glTensorConv[warpLane];
 
-  const int warpLane = threadIdx.x & (warpSize - 1);
-  TensorConv tc;
-  if (warpLane < rank) {
-    tc = glTensorConv[warpLane];
-  }
+	TensorError_t error {};
+	error.pos = 0xffffffff;
 
-  TensorError_t error;
-  error.pos = 0xffffffff;
-  error.refVal = 0;
-  error.dataVal = 0;
+	for (int base = blockIdx.x * blockDim.x; base < ndata; base += blockDim.x * gridDim.x)
+	{
+		int i = base + threadIdx.x;
+		T dataValT = (i < ndata) ? data[i] : -1;
 
-  for (int base = blockIdx.x*blockDim.x;base < ndata;base += blockDim.x*gridDim.x) {
-    int i = base + threadIdx.x;
-    T dataValT = (i < ndata) ? data[i] : -1;
-    int refVal = 0;
-    for (int j=0;j < rank;j++) {
-      refVal += ((i/__shfl_sync(0xffffffff,tc.c,j)) % __shfl_sync(0xffffffff,tc.d,j))*__shfl_sync(0xffffffff,tc.ct,j);
-    }
+		// Make a sum of all values (TODO what values?)
+		int refVal = 0;
+		for (int j = 0; j < rank; j++)
+			refVal += ((i / __shfl_sync(0xffffffff, tc.c, j))
+				% __shfl_sync(0xffffffff, tc.d, j))
+				* __shfl_sync(0xffffffff, tc.ct, j);
 
-    int dataVal = (dataValT & 0xffffffff)/(sizeof(T)/4);
+		// TODO Why dataValT is masked with a value smaller than the type?
+		// TODO Why divisions by type size and by 4?
+		int dataVal = (dataValT & 0xffffffff) / (sizeof(T) / 4);
 
-    if (i < ndata && refVal != dataVal && i < error.pos) {
-      error.pos = i;
-      error.refVal = refVal;
-      error.dataVal = dataVal;
-    }
-  }
+		if (i < ndata && refVal != dataVal && i < error.pos)
+		{
+			error.pos = i;
+			error.refVal = refVal;
+			error.dataVal = dataVal;
+		}
+	}
 
-  // Set FAIL flag
-  if (error.pos != 0xffffffff) {
-    // printf("error %d %d %d\n", error.pos, error.refVal, error.dataVal);
-    *glFail = 1;
-  }
+	// Gather error status from all threads of block, so that the
+	// minimum error.pos shall arrive into shPos[0] (or 0xffffffff in case of no error).
+	shPos[threadIdx.x] = error.pos;
+	__syncthreads();
+	for (int d = 1; d < blockDim.x; d *= 2)
+	{
+		int t = threadIdx.x + d;
 
-  shPos[threadIdx.x] = error.pos;
-  __syncthreads();
-  for (int d=1;d < blockDim.x;d *= 2) {
-    int t = threadIdx.x + d;
-    unsigned int posval = (t < blockDim.x) ? shPos[t] : 0xffffffff;
-    __syncthreads();
-    shPos[threadIdx.x] = min(posval, shPos[threadIdx.x]);
-  __syncthreads();
-  }
-  // Minimum error.pos is in shPos[0] (or 0xffffffff in case of no error)
+		// TODO This is only needed if block size is not divisible
+		// by size of warp, which is very unlikely the case. Remove?
+		unsigned int posval = (t < blockDim.x) ? shPos[t] : 0xffffffff;
+		__syncthreads();
 
-  if (shPos[0] != 0xffffffff && shPos[0] == error.pos) {
-    // Error has occured and this thread has the minimum error.pos
-    // printf("BOO error %d %d %d | %d\n", error.pos, error.refVal, error.dataVal, blockIdx.x);
-    glError[blockIdx.x] = error;
-  }
+		shPos[threadIdx.x] = min(posval, shPos[threadIdx.x]);
+		__syncthreads();
+	}
 
+	// If there is at least one error, the 0th thread saves
+	// its detail in the output global memory variable.
+	if (threadIdx.x == 0)
+	{
+		if (shPos[0] != 0xffffffff && shPos[0] == error.pos)
+		{
+			// Save error details in the global memory.
+			glError[blockIdx.x] = error;
+
+			// Set the global failure flag as well.
+			atomicAdd(glFail, 1);
+		}
+	}
 }
 
-// ################################################################################
-// ################################################################################
-// ################################################################################
-
-//
-// Class constructor
-//
-TensorTester::TensorTester() : maxRank(32), maxNumblock(256) {
-  h_tensorConv = new TensorConv[maxRank];
-  h_error      = new TensorError_t[maxNumblock];
-  gpuCheck(gpuMalloc(&d_tensorConv, sizeof(TensorConv) * maxRank));
-  gpuCheck(gpuMalloc(&d_error, sizeof(TensorError_t) * maxNumblock));
-  gpuCheck(gpuMalloc(&d_fail, sizeof(int)));
+TensorTester::TensorTester() : maxRank(32), maxNumblock(256)
+{
+	h_tensorConv = new TensorConv[maxRank];
+	h_error = new TensorError_t[maxNumblock];
+	gpuCheck(gpuMalloc(&d_tensorConv, sizeof(TensorConv) * maxRank));
+	gpuCheck(gpuMalloc(&d_error, sizeof(TensorError_t) * maxNumblock));
+	gpuCheck(gpuMalloc(&d_fail, sizeof(int)));
 }
 
-//
-// Class destructor
-//
-TensorTester::~TensorTester() {
-  delete [] h_tensorConv;
-  delete [] h_error;
-  gpuCheck(gpuFree(d_tensorConv));
-  gpuCheck(gpuFree(d_error));
-  gpuCheck(gpuFree(d_fail));
+TensorTester::~TensorTester()
+{
+	delete [] h_tensorConv;
+	delete [] h_error;
+	gpuCheck(gpuFree(d_tensorConv));
+	gpuCheck(gpuFree(d_error));
+	gpuCheck(gpuFree(d_fail));
 }
 
 void TensorTester::setTensorCheckPattern(unsigned int* data, unsigned int ndata) {
@@ -131,26 +137,7 @@ void TensorTester::setTensorCheckPattern(unsigned int* data, unsigned int ndata)
   gpuCheck(gpuGetLastError());
 }
 
-// void calcTensorConv(const int rank, const int* dim, const int* permutation,
-//   TensorConv* tensorConv) {
-
-//   tensorConv[0].c = 1;
-//   tensorConv[0].d = dim[0];
-//   tensorConv[permutation[0]].ct = 1;
-//   int ct_prev = 1;
-//   for (int i=1;i < rank;i++) {
-//     tensorConv[i].c = tensorConv[i-1].c*dim[i-1];
-//     tensorConv[i].d = dim[i];
-//     int ct = ct_prev*dim[permutation[i-1]];
-//     tensorConv[permutation[i]].ct = ct;
-//     ct_prev = ct;
-//   }
-
-// }
-
-//
-// Calculates tensor conversion constants. Returns total volume of tensor
-//
+// Calculates tensor conversion constants. Returns total volume of tensor.
 int TensorTester::calcTensorConv(const int rank, const int* dim, const int* permutation,
   TensorConv* tensorConv) {
 
@@ -189,12 +176,16 @@ template<typename T> bool TensorTester::checkTranspose(int rank, int* dim, int* 
   set_device_array<TensorError_t>(d_error, 0, maxNumblock);
   set_device_array<int>(d_fail, 0, 1);
 
+  // Compute grid for a data size with padding
   int numthread = 512;
-  int numblock = min(maxNumblock, (ndata - 1)/numthread + 1 );
-  int shmemsize = numthread*sizeof(unsigned int);
-  checkTransposeKernel<<< numblock, numthread, shmemsize >>>(data, ndata, rank, d_tensorConv, d_error, d_fail);
+  int numblock = min(maxNumblock, (ndata - 1) / numthread + 1);
+
+  // 
+  int szshmem = numthread * sizeof(unsigned int);
+  checkTransposeKernel<<< numblock, numthread, szshmem>>>(data, ndata, rank, d_tensorConv, d_error, d_fail);
   gpuCheck(gpuGetLastError());
 
+  // Reset the error status flags
   int h_fail;
   copy_DtoH<int>(d_fail, &h_fail, 1);
   gpuCheck(gpuDeviceSynchronize());
