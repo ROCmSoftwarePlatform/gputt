@@ -72,7 +72,14 @@ __global__ void checkTransposeKernel(
 		// TODO Why divisions by type size and by 4?
 		int dataVal = (dataValT & 0xffffffff) / (sizeof(T) / 4);
 
-		if (i < ndata && refVal != dataVal && i < error.pos)
+		// Skip index with no actual data.
+		if (i >= ndata) continue;
+
+		// Record error in the smallest index.
+		if (i >= error.pos) continue;
+
+		// If a mismatch, record an error.
+		if (refVal != dataVal)
 		{
 			error.pos = i;
 			error.refVal = refVal;
@@ -82,7 +89,7 @@ __global__ void checkTransposeKernel(
 
 	// Gather error status from all threads of block, so that the
 	// minimum error.pos shall arrive into shPos[0] (or 0xffffffff in case of no error).
-	shPos[threadIdx.x] = error.pos;
+	shPos[threadIdx.x] = threadIdx.x;
 	__syncthreads();
 	for (int d = 1; d < blockDim.x; d *= 2)
 	{
@@ -97,18 +104,16 @@ __global__ void checkTransposeKernel(
 		__syncthreads();
 	}
 
-	// If there is at least one error, the 0th thread saves
-	// its detail in the output global memory variable.
-	if (threadIdx.x == 0)
+	// If there is at least one error, the details will be
+	// saved by a thread, which holds error data with the
+	// corresponding data index.
+	if (shPos[0] != 0xffffffff && shPos[0] == error.pos)
 	{
-		if (shPos[0] != 0xffffffff && shPos[0] == error.pos)
-		{
-			// Save error details in the global memory.
-			glError[blockIdx.x] = error;
+		// Save error details in the global memory.
+		glError[blockIdx.x] = error;
 
-			// Set the global failure flag as well.
-			atomicAdd(glFail, 1);
-		}
+		// Set the global failure flag as well.
+		*glFail = 1;
 	}
 }
 
@@ -149,7 +154,7 @@ int TensorTester::calcTensorConv(const int rank, const int* dim, const int* perm
   for (int i=1;i < rank;i++) {
     vol *= dim[i];
 
-    tensorConv[permutation[i]].c = tensorConv[permutation[i-1]].c*dim[permutation[i-1]];
+    tensorConv[permutation[i]].c = tensorConv[permutation[i-1]].c * dim[permutation[i-1]];
 
     tensorConv[i].d  = dim[i];
     tensorConv[i].ct = tensorConv[i-1].ct*dim[i-1];

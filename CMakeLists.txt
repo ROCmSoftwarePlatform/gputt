@@ -65,6 +65,9 @@ set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodevi
 
 if (HIP_COMPAT_ENABLED)
 set(HIP_LANGUAGE CXX)
+set_source_files_properties(${${PROJECT_NAME}_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "-x hip")
+set_source_files_properties(${${PROJECT_NAME}_bench_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "-x hip")
+set_source_files_properties(${${PROJECT_NAME}_test_SOURCE_FILES} PROPERTIES COMPILE_FLAGS "-x hip")
 else()
 set(HIP_LANGUAGE HIP)
 endif()
@@ -100,7 +103,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/gputt>  
     $<INSTALL_INTERFACE:include/gputt>)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-if(CMAKE_HIP_COMPILER)
+if(hip_FOUND)
 target_link_libraries(${PROJECT_NAME} hip::amdhip64)
 endif()
 
