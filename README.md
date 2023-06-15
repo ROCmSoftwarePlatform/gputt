@@ -62,6 +62,12 @@ Options:
 -measure      : use gputtPlanMeasure (default is gputtPlan)
 ```
 
+The following modern GPUs have been tested and passed the correctness test suite successfully:
+
+* RTX 3080 LHR (GA104, CC 8.6)
+* Radeon RX Vega 56 (gfx900)
+* Radeon RX 7900 XTX (gfx1100)
+
 ## Performance
 
 hipTT was designed with performance as the main goal. Here are performance benchmarks for a random set of tensors with 200M `double` elements with ranks 2 to 7. The benchmarks were run with the measurement flag on `./gputt_bench -measure -bench 3`.
