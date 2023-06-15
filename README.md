@@ -84,7 +84,7 @@ hipTT was designed with performance as the main goal. Here are performance bench
 
 hipTT uses a "plan structure" similar to FFTW and cuFFT libraries, where the
 user first creates a plan for the transpose and then executes that plan.
-Here is an example code.
+Here is an example code (please see a fully working example code in `src/example/example.cu`).
 
 ```c++
 #include <gputt.h>
