@@ -11,7 +11,7 @@
   gputtResult err = stmt; \
   if (err != GPUTT_SUCCESS) { \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
-    exit(1); \
+    exit(-1); \
   } \
 } while(0)
 
@@ -58,6 +58,27 @@ int main()
 
   GPU_ERR_CHECK(gpuFree(idataGPU));
   GPU_ERR_CHECK(gpuFree(odataGPU));
+
+  // Perform the same pemutation on the CPU.
+  std::vector<double> odata2(odata.size());
+  for (int d0 = 0; d0 < dim[0]; d0++)
+    for (int d1 = 0; d1 < dim[1]; d1++)
+      for (int d2 = 0; d2 < dim[2]; d2++)
+        for (int d3 = 0; d3 < dim[3]; d3++)
+        {
+          auto& out2 = odata2[d3 * dim[0] * dim[2] * dim[1] + d0 * dim[2] * dim[1] + d2 * dim[1] + d1];
+          auto in = idata[d0 * dim[1] * dim[2] * dim[3] + d1 * dim[2] * dim[3] + d2 * dim[3] + d3];
+
+          out2 = in;
+
+	  // Compare with gpuTT's output element.
+          auto out = odata[d3 * dim[0] * dim[2] * dim[1] + d0 * dim[2] * dim[1] + d2 * dim[1] + d1];
+	  if (out != out2)
+	  {
+            fprintf(stderr, "Output elements mismatch: %f != %f\n", out, out2);
+	    exit(-1);
+	  }
+        }
 
   return 0;
 }
