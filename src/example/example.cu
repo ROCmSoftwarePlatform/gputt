@@ -51,6 +51,8 @@ int main()
   // Execute plan
   GPUTT_ERR_CHECK(gputtExecute(plan, idataGPU, odataGPU));
 
+  GPU_ERR_CHECK(gpuDeviceSynchronize());
+
   GPU_ERR_CHECK(gpuMemcpy(odata.data(), odataGPU, odata.size() * sizeof(odata[0]), gpuMemcpyDeviceToHost));
 
   // Destroy plan
@@ -66,8 +68,8 @@ int main()
       for (int d2 = 0; d2 < dim[2]; d2++)
         for (int d3 = 0; d3 < dim[3]; d3++)
         {
-          auto& out2 = odata2[d3 * dim[0] * dim[2] * dim[1] + d0 * dim[2] * dim[1] + d2 * dim[1] + d1];
           auto in = idata[d0 * dim[1] * dim[2] * dim[3] + d1 * dim[2] * dim[3] + d2 * dim[3] + d3];
+          auto& out2 = odata2[d3 * dim[0] * dim[2] * dim[1] + d0 * dim[2] * dim[1] + d2 * dim[1] + d1];
 
           out2 = in;
 
