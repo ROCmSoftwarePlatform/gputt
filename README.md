@@ -204,6 +204,28 @@ gputtResult gputtExecute(gputtHandle handle, void* idata, void* odata);
 
  * Make "tiled" method work with sets of ranks (where ranks in `M_m` and `M_k` remain in same order)
 
+## Troubleshooting
+
+1. HIP compiler might appear not found as shown below, even if it definitely exists in the system. The reason is not a PATH setting. The `check_language(HIP)` command actually finds the compiler, but runs into an issue when testing it, for example [this issue](https://github.com/RadeonOpenCompute/ROCm/issues/1843). The solution is to temporary specify the HIP compiler explicitly and handle an error, which will be displayed upon CMake testing it: `cmake -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ ..`.
+
+```
+-- Looking for a HIP compiler - NOTFOUND
+```
+
+2. The following error could be fixed by `sudo apt-get install libstdc++-12-dev`, as suggested in this issue:
+
+```
+  The HIP compiler
+
+    "/opt/rocm/llvm/bin/clang++"
+
+  is not able to compile a simple test program.
+
+    /opt/rocm-5.5.0/llvm/lib/clang/16.0.0/include/__clang_hip_runtime_wrapper.h:50:10: fatal error: 'cmath' file not found
+    #include <cmath>
+             ^~~~~~~
+```
+
 ## Credits
 
 In memory of Antti-Pekka Hynninen.
