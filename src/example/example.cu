@@ -4,18 +4,27 @@
 #include <vector>
 
 //
-// Error checking wrapper for gputt
+// Error checking wrapper for gpuTT and vendor API.
 //
-#define gputtCheck(stmt) do {                                 \
-  gputtResult err = stmt;                            \
-  if (err != GPUTT_SUCCESS) {                          \
+
+#define GPUTT_ERR_CHECK(stmt) do { \
+  gputtResult err = stmt; \
+  if (err != GPUTT_SUCCESS) { \
     fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
     exit(1); \
-  }                                                  \
+  } \
 } while(0)
 
-int main() {
+#define GPU_ERR_CHECK(x) do { \
+  gpuError_t err = x; \
+  if (err != gpuSuccess) { \
+    fprintf(stderr, "Error \"%s\" at %s :%d \n" , gpuGetErrorString(err), __FILE__ , __LINE__); \
+    exit(-1); \
+  } \
+} while (0)
 
+int main()
+{
   // Four dimensional tensor
   // Transpose (31, 549, 2, 3) -> (3, 31, 2, 549)
   int dim[4] = {31, 549, 2, 3};
@@ -26,29 +35,29 @@ int main() {
   std::vector<double> odata(idata.size());
 
   double* idataGPU;
-  gpuMalloc(&idataGPU, idata.size());
-  gpuMemcpy(idataGPU, idata.data(), idata.size() * sizeof(idata[0]), gpuMemcpyHostToDevice);
+  GPU_ERR_CHECK(gpuMalloc(&idataGPU, idata.size() * sizeof(idata[0])));
+  GPU_ERR_CHECK(gpuMemcpy(idataGPU, idata.data(), idata.size() * sizeof(idata[0]), gpuMemcpyHostToDevice));
 
   double* odataGPU;
-  gpuMalloc(&odataGPU, odata.size());
+  GPU_ERR_CHECK(gpuMalloc(&odataGPU, odata.size() * sizeof(odata[0])));
 
   // Option 1: Create plan on NULL stream and choose implementation based on heuristics
   gputtHandle plan;
-  gputtCheck(gputtPlan(&plan, 4, dim, permutation, sizeof(idata[0]), 0));
+  GPUTT_ERR_CHECK(gputtPlan(&plan, 4, dim, permutation, sizeof(idata[0]), 0));
 
   // Option 2: Create plan on NULL stream and choose implementation based on performance measurements
-  // gputtCheck(gputtPlanMeasure(&plan, 4, dim, permutation, sizeof(idata[0]), 0, idata, odata));
+  // GPUTT_ERR_CHECK(gputtPlanMeasure(&plan, 4, dim, permutation, sizeof(idata[0]), 0, idata, odata));
 
   // Execute plan
-  gputtCheck(gputtExecute(plan, idataGPU, odataGPU));
+  GPUTT_ERR_CHECK(gputtExecute(plan, idataGPU, odataGPU));
 
-  gpuMemcpy(odata.data(), odataGPU, odata.size() * sizeof(odata[0]), gpuMemcpyDeviceToHost);
+  GPU_ERR_CHECK(gpuMemcpy(odata.data(), odataGPU, odata.size() * sizeof(odata[0]), gpuMemcpyDeviceToHost));
 
   // Destroy plan
-  gputtCheck(gputtDestroy(plan));
+  GPUTT_ERR_CHECK(gputtDestroy(plan));
 
-  gpuFree(idataGPU);
-  gpuFree(odataGPU);
+  GPU_ERR_CHECK(gpuFree(idataGPU));
+  GPU_ERR_CHECK(gpuFree(odataGPU));
 
   return 0;
 }
