@@ -30,11 +30,11 @@ SOFTWARE.
 #include <vector>
 #include "gputtTypes.h"
 
-#ifdef __HIP_PLATFORM_HCC__
-const int TILEDIM = 64;
-#else
-const int TILEDIM = 32;
-#endif
+// Size of the shared memory tile used in some algorithms.
+// This parameter is associated with the warp (wavefront) size,
+// and is therefore device-specific.
+#define TILEDIM warpSize
+
 const int TILEROWS = 8;
 
 // Transposing methods
