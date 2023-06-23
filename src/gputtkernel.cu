@@ -23,6 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
+#include "gputt/gputt.h"
 #include "gputtUtils.h"
 #include "LRUCache.h"
 #include "gputtkernel.h"
@@ -595,14 +596,14 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
   int numActiveBlock;
   int numthread = lc.numthread.x * lc.numthread.y * lc.numthread.z;
   switch(method) {
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     {
       // This value does not matter, but should be > 0
       numActiveBlock = 1;
     }
     break;
 
-    case Packed:
+    case gputtTransposeMethodPacked:
     {
 #define CALL0(TYPE, NREG) \
   gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
@@ -620,7 +621,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     }
     break;
 
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     {
       // Allocate cache structure if needed
       if (numDevices == -1) {
@@ -663,7 +664,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     }
     break;
 
-    case Tiled:
+    case gputtTransposeMethodTiled:
     {
       switch (sizeofType) {
       case 2 :
@@ -682,7 +683,7 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
     }
     break;
 
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     {
       switch (sizeofType) {
       case 2 :
@@ -724,7 +725,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
   int numActiveBlockReturn = -1;
 
   switch(ts.method) {
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     {
       // These values don't matter
       lc.numthread.x = 1;
@@ -740,7 +741,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
     }
     break;
 
-    case Packed:
+    case gputtTransposeMethodPacked:
     {
       // Amount of shared memory required
       lc.shmemsize = ts.shmemAlloc(sizeofType); //ts.volMmk*sizeofType;
@@ -795,7 +796,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
     }
     break;
 
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     {
       // Amount of shared memory required
       lc.shmemsize = ts.shmemAlloc(sizeofType);
@@ -851,7 +852,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
     }
     break;
 
-    case Tiled:
+    case gputtTransposeMethodTiled:
     {
       lc.numthread.x = TILEDIM;
       lc.numthread.y = TILEROWS;
@@ -864,7 +865,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
     }
     break;
 
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     {
       lc.numthread.x = TILEDIM;
       lc.numthread.y = TILEROWS;
@@ -916,7 +917,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
   }
 
   switch(ts.method) {
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     {
       if( alpha != 1 || beta != 0 ){
          printf("gpuTT ERROR: this case still has to be implemented\n"); 
@@ -927,7 +928,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
     }
     break;
 
-    case Packed:
+    case gputtTransposeMethodPacked:
     {
       switch(lc.numRegStorage) {
 #define CALL0(TYPE, NREG, betaIsZero) \
@@ -971,7 +972,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
     }
     break;
 
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     {
       switch(lc.numRegStorage) {
 #define CALL0(TYPE, NREG, betaIsZero) \
@@ -1015,7 +1016,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
     }
     break;
 
-    case Tiled:
+    case gputtTransposeMethodTiled:
     {
 #define CALL(TYPE, betaIsZero) \
       transposeTiled<TYPE, betaIsZero> <<< lc.numblock, lc.numthread, 0, plan.stream >>> \
@@ -1049,7 +1050,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
     }
     break;
 
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     {
 #define CALL(TYPE, betaIsZero) \
       transposeTiledCopy<TYPE, betaIsZero> <<< lc.numblock, lc.numthread, 0, plan.stream >>> \

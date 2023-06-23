@@ -90,7 +90,7 @@ static gputtResult gputtPlanCheckInput(int rank, const int* dim, const int* perm
 }
 
 gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  gpuStream_t stream) {
+  gpuStream_t stream, gputtTransposeMethod method) {
 
 #ifdef ENABLE_NVTOOLS
   gpuRangeStart("init");
@@ -167,9 +167,9 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   // Choose the plan
   std::list<gputtPlan_t>::iterator bestPlan = choosePlanHeuristic(plans);
   if (bestPlan == plans.end()) return GPUTT_INTERNAL_ERROR;
-
-  // bestPlan->print();
-
+#if 1
+  bestPlan->print();
+#endif
   // Create copy of the plan outside the list
   gputtPlan_t* plan = new gputtPlan_t();
   // NOTE: No deep copy needed here since device memory hasn't been allocated yet

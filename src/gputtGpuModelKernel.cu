@@ -23,6 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
+#include "gputt/gputt.h"
 #include "gputtUtils.h"
 #include "gputtGpuModelKernel.h"
 
@@ -705,12 +706,12 @@ bool gputtGpuModelKernel(gputtPlan_t& plan, const int accWidth, const int cacheW
   set_device_array<MemStat>(devMemStat, 0, 1, plan.stream);
 
   switch(ts.method) {
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     {
       return false;
     }
 
-    case Packed:
+    case gputtTransposeMethodPacked:
     {
       switch(lc.numRegStorage) {
 #define CALL0(NREG) \
@@ -729,7 +730,7 @@ bool gputtGpuModelKernel(gputtPlan_t& plan, const int accWidth, const int cacheW
     }
     break;
 
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     {
 
       // Calculate max. volume of split Mmk
@@ -753,7 +754,7 @@ bool gputtGpuModelKernel(gputtPlan_t& plan, const int accWidth, const int cacheW
     }
     break;
 
-    case Tiled:
+    case gputtTransposeMethodTiled:
     {
       countTiled <<< lc.numblock, lc.numthread, 0, plan.stream >>>
       (((ts.volMm - 1)/TILEDIM + 1), ts.volMbar, ts.sizeMbar, plan.tiledVol, plan.cuDimMk, plan.cuDimMm,
@@ -761,7 +762,7 @@ bool gputtGpuModelKernel(gputtPlan_t& plan, const int accWidth, const int cacheW
     }
     break;
 
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     {
       countTiledCopy <<< lc.numblock, lc.numthread, 0, plan.stream >>>
       (((ts.volMm - 1)/TILEDIM + 1), ts.volMbar, ts.sizeMbar, plan.cuDimMk, plan.cuDimMm, plan.tiledVol,

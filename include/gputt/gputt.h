@@ -50,6 +50,17 @@ typedef enum GPUTT_API gputtResult_t {
   GPUTT_UNDEFINED_ERROR,    // Undefined error
 } gputtResult;
 
+// Transposing methods
+typedef enum GPUTT_API gputtTransposeMethod_t {
+  gputtTransposeMethodUnknown,
+  gputtTransposeMethodTrivial,
+  gputtTransposeMethodPacked,
+  gputtTransposeMethodPackedSplit,
+  gputtTransposeMethodTiled,
+  gputtTransposeMethodTiledCopy,
+  NumTransposeMethods
+} gputtTransposeMethod;
+
 //
 // Create plan
 //
@@ -60,12 +71,14 @@ typedef enum GPUTT_API gputtResult_t {
 // permutation[rank] = Transpose permutation
 // sizeofType        = Size of the elements of the tensor in bytes (=2, 4 or 8)
 // stream            = CUDA stream (0 if no stream is used)
+// method            = Transpose method to use (will be chosen based on heuristic, if Unknown - default)
+//
 //
 // Returns
 // Success/unsuccess code
 // 
 gputtResult GPUTT_API gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  gpuStream_t stream);
+  gpuStream_t stream, gputtTransposeMethod method = gputtTransposeMethodUnknown);
 
 //
 // Create plan and choose implementation by measuring performance

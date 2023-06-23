@@ -27,6 +27,8 @@ SOFTWARE.
 #include <unordered_set>
 #include <cmath>
 #include <random>
+
+#include "gputt/gputt.h"
 #include "gputtUtils.h"
 #include "gputtplan.h"
 #include "gputtkernel.h"
@@ -34,22 +36,22 @@ SOFTWARE.
 
 void printMethod(int method) {
   switch(method) {
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     printf("Trivial");
     break;
-    case Packed:
+    case gputtTransposeMethodPacked:
     printf("Packed");
     break;
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     printf("PackedSplit");
     break;
-    case Tiled:
+    case gputtTransposeMethodTiled:
     printf("Tiled");
     break;
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     printf("TiledCopy");
     break;
-    case Unknown:
+    case gputtTransposeMethodUnknown:
     printf("Unknown");
     return;
     break;
@@ -169,7 +171,7 @@ public:
 };
 
 TensorSplit::TensorSplit() {
-  method = Unknown;
+  method = gputtTransposeMethodUnknown;
   sizeMm = 0;
   volMm = 0;
   sizeMk = 0;
@@ -194,7 +196,7 @@ void TensorSplit::print() {
   printf("volMm %d volMk %d volMmk %d volMbar %d volMkBar %d\n",
     volMm, volMk, volMmk, volMbar, volMkBar);
   printf("volMmkInCont %d volMmkOutCont %d\n", volMmkInCont, volMmkOutCont);
-  if (method == PackedSplit) printf("numSplit %d splitRank %d\n", numSplit, splitRank);
+  if (method == gputtTransposeMethodPackedSplit) printf("numSplit %d splitRank %d\n", numSplit, splitRank);
 }
 
 void TensorSplit::update(const int sizeMm_in, const int sizeMk_in, const int rank,
@@ -281,23 +283,23 @@ void TensorSplit::update(const int sizeMm_in, const int sizeMk_in, const int ran
 bool operator==(const TensorSplit& lhs, const TensorSplit& rhs) {
   if (lhs.method != rhs.method) return false;
 
-  if (lhs.method == Trivial) return true;
+  if (lhs.method == gputtTransposeMethodTrivial) return true;
 
-  if (lhs.method == Tiled) {
+  if (lhs.method == gputtTransposeMethodTiled) {
     return
     (lhs.volMm == rhs.volMm) &&
     (lhs.volMk == rhs.volMk) &&
     (lhs.volMbar == rhs.volMbar);
   }
 
-  if (lhs.method == TiledCopy) {
+  if (lhs.method == gputtTransposeMethodTiledCopy) {
     return
     (lhs.volMm == rhs.volMm) &&
     (lhs.volMkBar == rhs.volMkBar) &&
     (lhs.volMbar == rhs.volMbar);
   }
 
-  if (lhs.method == Packed || lhs.method == PackedSplit) {
+  if (lhs.method == gputtTransposeMethodPacked || lhs.method == gputtTransposeMethodPackedSplit) {
     return
     (lhs.volMmkInCont == rhs.volMmkInCont) &&
     (lhs.volMmkOutCont == rhs.volMmkOutCont) &&
@@ -318,7 +320,7 @@ bool operator==(const TensorSplit& lhs, const TensorSplit& rhs) {
     (lhs.numSplit == rhs.numSplit);
   }
 
-  // if (lhs.method == Packed || lhs.method == PackedSplit) {
+  // if (lhs.method == gputtTransposeMethodPacked || lhs.method == gputtTransposeMethodPackedSplit) {
   //   return
   //   (lhs.sizeMmk == rhs.sizeMmk) &&
   //   (lhs.volMmk == rhs.volMmk) &&
@@ -352,31 +354,31 @@ size_t TensorSplit::shmem() const {
 
   switch(method) {
 
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     {
       vol = 0;
     }
     break;
 
-    case Packed:
+    case gputtTransposeMethodPacked:
     {
       vol = volMmk;
     }
     break;
 
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     {
       vol = (splitDim/numSplit + ((splitDim % numSplit) > 0))*volMmkUnsplit;
     }
     break;
 
-    case Tiled:
+    case gputtTransposeMethodTiled:
     {
       vol = TILEDIM*TILEDIM;
     }
     break;
 
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     {
       vol = 0;
     }
@@ -395,31 +397,31 @@ size_t TensorSplit::volMmkUsed() const {
 
   switch(method) {
 
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     {
       vol = volMmk;
     }
     break;
 
-    case Packed:
+    case gputtTransposeMethodPacked:
     {
       vol = volMmk;
     }
     break;
 
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     {
       vol = (splitDim/numSplit)*volMmkUnsplit;
     }
     break;
 
-    case Tiled:
+    case gputtTransposeMethodTiled:
     {
       vol = std::min(TILEDIM, volMm)*std::min(TILEDIM, volMk);
     }
     break;
 
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     {
       vol = std::min(TILEDIM, volMm)*std::min(TILEDIM, volMk);
     }
@@ -439,31 +441,31 @@ size_t TensorSplit::shmemAlloc(int sizeofType) const {
 
   switch(method) {
 
-    case Trivial:
+    case gputtTransposeMethodTrivial:
     {
       vol = 0;
     }
     break;
 
-    case Packed:
+    case gputtTransposeMethodPacked:
     {
       vol = (size_t)volMmk*sizeofType;
     }
     break;
 
-    case PackedSplit:
+    case gputtTransposeMethodPackedSplit:
     {
       vol = (size_t)(splitDim/numSplit + ((splitDim % numSplit) > 0))*volMmkUnsplit*sizeofType;
     }
     break;
 
-    case Tiled:
+    case gputtTransposeMethodTiled:
     {
       vol = (TILEDIM+1)*TILEDIM*sizeofType;
     }
     break;
 
-    case TiledCopy:
+    case gputtTransposeMethodTiledCopy:
     {
       vol = 0;
     }
@@ -489,7 +491,7 @@ bool gputtPlan_t::createTrivialPlans(const int rank, const int* dim, const int* 
 
   if (rank == 1) {
     TensorSplit ts;
-    ts.method = Trivial;
+    ts.method = gputtTransposeMethodTrivial;
     ts.update(1, 1, rank, dim, permutation);    
     LaunchConfig lc;
     int numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
@@ -508,7 +510,7 @@ bool gputtPlan_t::createTiledPlans(const int rank, const int* dim, const int* pe
 
   if (permutation[0] != 0 && rank > 1) {
     TensorSplit ts;
-    ts.method = Tiled;
+    ts.method = gputtTransposeMethodTiled;
     ts.update(1, 1, rank, dim, permutation);    
     LaunchConfig lc;
     int numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
@@ -533,7 +535,7 @@ bool gputtPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int
   if (numMmMkSame >= 1) {
     numMmMkSame = 1;
     TensorSplit ts;
-    ts.method = TiledCopy;
+    ts.method = gputtTransposeMethodTiledCopy;
     if (numMmMkSame < rank) {
       ts.update(numMmMkSame, numMmMkSame + 1, rank, dim, permutation);      
     } else {
@@ -558,7 +560,7 @@ bool gputtPlan_t::createPackedPlans(const int rank, const int* dim, const int* p
   for (int numMm=1;numMm < rank;numMm++) {
     for (int numMk=1;numMk < rank;numMk++) {
       TensorSplit ts;
-      ts.method = Packed;
+      ts.method = gputtTransposeMethodPacked;
       ts.update(numMm, numMk, rank, dim, permutation);
       int numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
       // Does not fit on the device, break out of inner loop
@@ -581,13 +583,13 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
   for (int numMm=1;numMm < rank;numMm++) {
     for (int numMk=1;numMk < rank;numMk++) {
       TensorSplit ts;
-      ts.method = Packed;
+      ts.method = gputtTransposeMethodPacked;
       ts.update(numMm, numMk, rank, dim, permutation);
       // Amount of shared memory required
       size_t shmemsize = ts.shmemAlloc(sizeofType);
       if (shmemsize > prop.sharedMemPerBlock) {
         // Does not fit into shared memory, need to split
-        ts.method = PackedSplit;
+        ts.method = gputtTransposeMethodPackedSplit;
         // Minimum size of split dimension
         const int splitDimMin = 2;
         // Split the largest dimension
@@ -715,16 +717,16 @@ bool operator>(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
   const TensorSplit& rts = rhs.tensorSplit;
 
   // Trivial method always wins
-  if (lts.method == Trivial) return true;
-  if (rts.method == Trivial) return false;
+  if (lts.method == gputtTransposeMethodTrivial) return true;
+  if (rts.method == gputtTransposeMethodTrivial) return false;
 
   // double dp = fabs(lhs.cycles - rhs.cycles)/std::min(lhs.cycles, rhs.cycles);
-  // if (dp < 0.15 && (lts.method == Packed || lts.method == PackedSplit) &&
-  //   (rts.method == Packed || rts.method == PackedSplit)) {
+  // if (dp < 0.15 && (lts.method == gputtTransposeMethodPacked || lts.method == gputtTransposeMethodPackedSplit) &&
+  //   (rts.method == gputtTransposeMethodPacked || rts.method == gputtTransposeMethodPackedSplit)) {
 
-  //   if (lts.method == Packed && rts.method == Packed) {
+  //   if (lts.method == gputtTransposeMethodPacked && rts.method == gputtTransposeMethodPacked) {
   //     return (lhs.numActiveBlock > rhs.numActiveBlock);
-  //   } else if (lts.method == Packed && rts.method == PackedSplit) {
+  //   } else if (lts.method == gputtTransposeMethodPacked && rts.method == gputtTransposeMethodPackedSplit) {
   //     if (lhs.cl_part_l1 == 0 && rhs.cl_part_l1 == 0) {
   //       if (lts.volMmkOutCont == rts.volMmkOutCont) {
   //         return (lhs.cycles < rhs.cycles);
@@ -734,7 +736,7 @@ bool operator>(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
   //     } else {
   //       return (lhs.cl_part_l1 == 0);
   //     }
-  //   } else if (lts.method == PackedSplit && rts.method == Packed) {
+  //   } else if (lts.method == gputtTransposeMethodPackedSplit && rts.method == gputtTransposeMethodPacked) {
   //     if (lhs.cl_part_l1 == 0 && rhs.cl_part_l1 == 0) {
   //       if (lts.volMmkOutCont == rts.volMmkOutCont) {
   //         return (lhs.cycles < rhs.cycles);
@@ -745,7 +747,7 @@ bool operator>(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
   //       return (rhs.cl_part_l1 != 0);
   //     }
   //   } else { 
-  //     //else if (lts.method == PackedSplit && rts.method == PackedSplit) {
+  //     //else if (lts.method == gputtTransposeMethodPackedSplit && rts.method == gputtTransposeMethodPackedSplit) {
   //     if (lhs.cl_part_l1 == rhs.cl_part_l1) {
   //       return (lts.volMmkOutCont > rts.volMmkOutCont);        
   //     } else {
@@ -788,8 +790,8 @@ void printMatlab(gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans, std::vect
   for (auto it=plans.begin();it != plans.end();it++,i++) {
     TensorSplit& ts = it->tensorSplit;
     LaunchConfig& lc = it->launchConfig;
-    if (ts.method == Packed || ts.method == PackedSplit ||
-      ts.method == Tiled || ts.method == TiledCopy)
+    if (ts.method == gputtTransposeMethodPacked || ts.method == gputtTransposeMethodPackedSplit ||
+      ts.method == gputtTransposeMethodTiled || ts.method == gputtTransposeMethodTiledCopy)
     {
       int numthread = lc.numthread.x*lc.numthread.y*lc.numthread.z;
       printf("MATLAB %d %d %d %d %1.3f %d %d %d %d %d %d %d %d %d %d %d %d %d %e %e\n", count, ts.method,
@@ -860,12 +862,12 @@ bool gputtPlan_t::setup(const int rank_in, const int* dim, const int* permutatio
   // Build cO
   TensorC cO(rank, rank, permutation, dim);
 
-  if (tensorSplit.method == Tiled) {
+  if (tensorSplit.method == gputtTransposeMethodTiled) {
     cuDimMk = cI.get(permutation[0]);
     cuDimMm = cO.get(0);
     tiledVol.x = dim[0];
     tiledVol.y = dim[permutation[0]];
-  } else if (tensorSplit.method == TiledCopy) {
+  } else if (tensorSplit.method == gputtTransposeMethodTiledCopy) {
     int rankMk = permutation[tensorSplit.sizeMk - 1];
     cuDimMk = cI.get(rankMk);
     cuDimMm = cO.get(rankMk);
@@ -940,7 +942,7 @@ bool gputtPlan_t::setup(const int rank_in, const int* dim, const int* permutatio
   mlp = 0.0f;
   cycles = 0.0;
 
-  if (tensorSplit.method == PackedSplit) {
+  if (tensorSplit.method == gputtTransposeMethodPackedSplit) {
     if (tensorSplit.splitRank < 0) return false;
     std::vector<int> dimSplit(dim, dim + rank);
     std::vector<int> dimSplitPlusOne(dim, dim + rank);
@@ -1007,7 +1009,7 @@ bool gputtPlan_t::setup(const int rank_in, const int* dim, const int* permutatio
     }
   }
 
-  if (tensorSplit.method == Packed) {
+  if (tensorSplit.method == gputtTransposeMethodPacked) {
     // Build MmkI = {q_1, ..., q_a}
     std::vector<int> MmkI(tensorSplit.sizeMmk);
     int j = 0;
@@ -1070,7 +1072,7 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample)
   // L2 cache line width (assumed)
   const int cacheWidth = prop.warpSize/sizeofType;
 
-  if (tensorSplit.method == Tiled) {
+  if (tensorSplit.method == gputtTransposeMethodTiled) {
     // Global memory
 #ifdef ENABLE_NVTOOLS
     gpuRangeStart("countTiledGlTransactions");
@@ -1086,7 +1088,7 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample)
     sst_tran = 1;
     sld_req = 1;
     sst_req = 1;
-  } else if (tensorSplit.method == TiledCopy) {
+  } else if (tensorSplit.method == gputtTransposeMethodTiledCopy) {
     // Global memory
 #ifdef ENABLE_NVTOOLS
     gpuRangeStart("countTiledGlTransactions (copy)");
@@ -1102,7 +1104,7 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample)
     sst_tran = 1;
     sld_req = 1;
     sst_req = 1;
-  } else if (tensorSplit.method == PackedSplit) {
+  } else if (tensorSplit.method == gputtTransposeMethodPackedSplit) {
     if (tensorSplit.splitRank < 0) return false;
 #ifdef ENABLE_NVTOOLS
     gpuRangeStart("PackedSplit: init");
@@ -1421,7 +1423,7 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample)
     gpuRangeStop();
 #endif
 
-  } else if (tensorSplit.method == Packed) {
+  } else if (tensorSplit.method == gputtTransposeMethodPacked) {
 #ifdef ENABLE_NVTOOLS
     gpuRangeStart("Packed: init");
 #endif
@@ -1582,7 +1584,7 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample)
 #ifdef ENABLE_NVTOOLS
     gpuRangeStop();
 #endif
-  } else if (tensorSplit.method == Trivial) {
+  } else if (tensorSplit.method == gputtTransposeMethodTrivial) {
     size_t vol = tensorSplit.volMmk*tensorSplit.volMbar;
     // Global memory
     gld_req = (vol - 1)/prop.warpSize + 1;
@@ -1607,13 +1609,13 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample)
   int numthread = launchConfig.numthread.x*launchConfig.numthread.y*launchConfig.numthread.z;
   // double cl_val = (double)cl_part/(double)std::max(1, cl_full + cl_part);
 
-  if (tensorSplit.method == Packed || tensorSplit.method == PackedSplit) {
-    cycles = cyclesPacked(tensorSplit.method == PackedSplit, sizeofType, prop, numthread,
+  if (tensorSplit.method == gputtTransposeMethodPacked || tensorSplit.method == gputtTransposeMethodPackedSplit) {
+    cycles = cyclesPacked(tensorSplit.method == gputtTransposeMethodPackedSplit, sizeofType, prop, numthread,
       numActiveBlock, launchConfig.numRegStorage, 
       gld_req, gst_req, gld_tran, gst_tran, sld_req, sst_req, sld_tran, sst_tran,
       num_iter, cl_full_l2, cl_part_l2);
-  } else if (tensorSplit.method == Tiled || tensorSplit.method == TiledCopy) {
-    cycles = cyclesTiled(tensorSplit.method == TiledCopy, sizeofType, prop, numthread,
+  } else if (tensorSplit.method == gputtTransposeMethodTiled || tensorSplit.method == gputtTransposeMethodTiledCopy) {
+    cycles = cyclesTiled(tensorSplit.method == gputtTransposeMethodTiledCopy, sizeofType, prop, numthread,
       numActiveBlock, mlp, gld_req, gst_req, gld_tran, gst_tran,
       sld_req, sst_req, sld_tran, sst_tran,
       num_iter, cl_full_l2, cl_part_l2);
@@ -1634,8 +1636,8 @@ void gputtPlan_t::activate() {
     }
   }
 
-  if (tensorSplit.method == Packed || tensorSplit.method == PackedSplit) {
-    int MmkSize = (tensorSplit.method == Packed) ? tensorSplit.sizeMmk : tensorSplit.sizeMmk*2;
+  if (tensorSplit.method == gputtTransposeMethodPacked || tensorSplit.method == gputtTransposeMethodPackedSplit) {
+    int MmkSize = (tensorSplit.method == gputtTransposeMethodPacked) ? tensorSplit.sizeMmk : tensorSplit.sizeMmk*2;
     if (Mmk == NULL) {
       gpuCheck(gpuMalloc(&Mmk, sizeof(TensorConvInOut) * MmkSize));
       copy_HtoD<TensorConvInOut>(hostMmk.data(), Mmk, MmkSize, stream);

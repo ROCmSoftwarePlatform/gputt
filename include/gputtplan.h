@@ -37,11 +37,6 @@ SOFTWARE.
 
 const int TILEROWS = 8;
 
-// Transposing methods
-enum {Unknown, Trivial, Packed, PackedSplit,
-  Tiled, TiledCopy,
-  NumTransposeMethods};
-
 // Tells how tensor is split into Mm and Mk and what method is used
 // NOTE: sizeMm and sizeMk fully define the split
 class TensorSplit {
