@@ -66,7 +66,7 @@ void getDeviceProp(int& deviceID, gpuDeviceProp_t &prop) {
 
 static gputtResult gputtPlanCheckInput(int rank, const int* dim, const int* permutation, size_t sizeofType) {
   // Check sizeofType
-  if (sizeofType != 4 && sizeofType != 8) return GPUTT_INVALID_PARAMETER;
+  if (sizeofType != 2 && sizeofType != 4 && sizeofType != 8) return GPUTT_INVALID_PARAMETER;
   // Check rank
   if (rank <= 1) return GPUTT_INVALID_PARAMETER;
   // Check dim[]

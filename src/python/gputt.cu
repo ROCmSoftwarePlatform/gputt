@@ -225,7 +225,7 @@ handle            = Returned handle to gpuTT plan
 rank              = Rank of the tensor
 dim[rank]         = Dimensions of the tensor
 permutation[rank] = Transpose permutation
-sizeofType        = Size of the elements of the tensor in bytes (=4 or 8)
+sizeofType        = Size of the elements of the tensor in bytes (=2, 4 or 8)
 stream            = CUDA stream (0 if no stream is used)
 
 Returns

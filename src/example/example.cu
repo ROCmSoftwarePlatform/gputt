@@ -97,8 +97,9 @@ void test()
 int main(int argc, char* argv[])
 {
   // Using integer element type to ease elements comparison.
-  test<double>();
-  test<float>();
+  test<uint16_t>();
+  test<uint32_t>();
+  test<uint64_t>();
 
   return 0;
 }

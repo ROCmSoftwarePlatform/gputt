@@ -33,6 +33,9 @@ SOFTWARE.
 #define __ballot_sync(mask, ...) __ballot(__VA_ARGS__)
 #define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)
 #define __shfl_xor_sync(mask, ...) __shfl_xor(__VA_ARGS__)
+#include <hip/hip_fp16.h>
+#else
+#include <cuda_fp16.h>
 #endif
 
 //
@@ -604,8 +607,12 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
 #define CALL0(TYPE, NREG) \
   gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
     transposePacked<TYPE, NREG, true>, numthread, lc.shmemsize)
+#define CALL(ICASE) case ICASE: \
+  if (sizeofType == 2) CALL0(__half, ICASE); \
+  if (sizeofType == 4) CALL0(float,  ICASE); \
+  if (sizeofType == 8) CALL0(double, ICASE); \
+  break
       switch(lc.numRegStorage) {
-#define CALL(ICASE) case ICASE: if (sizeofType == 4) CALL0(float,  ICASE); if (sizeofType == 8) CALL0(double, ICASE); break
 #include "calls.h"
       }
 #undef CALL
@@ -629,11 +636,11 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
       int key_reg = (lc.numRegStorage - 1);
       int key_type = (sizeofType == 4);
       unsigned long long int key = 
-      (unsigned long long int)(lc.shmemsize/sizeofType)*MAX_NUMWARP*MAX_REG_STORAGE*MAX_NUMTYPE*numDevices + 
-      (unsigned long long int)deviceID*MAX_NUMWARP*MAX_REG_STORAGE*MAX_NUMTYPE +
-      (unsigned long long int)key_type*MAX_NUMWARP*MAX_REG_STORAGE + 
-      (unsigned long long int)key_reg*MAX_NUMWARP + 
-      (unsigned long long int)key_warp;
+        (unsigned long long int)(lc.shmemsize/sizeofType)*MAX_NUMWARP*MAX_REG_STORAGE*MAX_NUMTYPE*numDevices + 
+        (unsigned long long int)deviceID*MAX_NUMWARP*MAX_REG_STORAGE*MAX_NUMTYPE +
+        (unsigned long long int)key_type*MAX_NUMWARP*MAX_REG_STORAGE + 
+        (unsigned long long int)key_reg*MAX_NUMWARP + 
+        (unsigned long long int)key_warp;
 
       numActiveBlock = nabCache.get(key);
       if (numActiveBlock == -1) {
@@ -641,10 +648,14 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
 #define CALL0(TYPE, NREG) \
   gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock, \
     transposePackedSplit<TYPE, NREG, true>, numthread, lc.shmemsize)
-      switch(lc.numRegStorage) {
-#define CALL(ICASE) case ICASE: if (sizeofType == 4) CALL0(float,  ICASE); if (sizeofType == 8) CALL0(double, ICASE); break
+#define CALL(ICASE) case ICASE: \
+  if (sizeofType == 2) CALL0(__half, ICASE); \
+  if (sizeofType == 4) CALL0(float,  ICASE); \
+  if (sizeofType == 8) CALL0(double, ICASE); \
+  break
+        switch(lc.numRegStorage) {
 #include "calls.h"
-      }
+        }
 #undef CALL
 #undef CALL0
         nabCache.set(key, numActiveBlock);
@@ -654,24 +665,38 @@ int getNumActiveBlock(const int method, const int sizeofType, const LaunchConfig
 
     case Tiled:
     {
-      if (sizeofType == 4) {
+      switch (sizeofType) {
+      case 2 :
+        gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+          transposeTiled<__half, true>, numthread, lc.shmemsize);
+        break;
+      case 4 :
         gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiled<float, true>, numthread, lc.shmemsize);
-      } else {
+        break;
+      case 8 :
         gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiled<double, true>, numthread, lc.shmemsize);
+        break;
       }
     }
     break;
 
     case TiledCopy:
     {
-      if (sizeofType == 4) {
+      switch (sizeofType) {
+      case 2 :
+        gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
+          transposeTiledCopy<__half, true>, numthread, lc.shmemsize);
+        break;
+      case 4 :
         gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiledCopy<float, true>, numthread, lc.shmemsize);
-      } else {
+        break;
+      case 8 :
         gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
           transposeTiledCopy<double, true>, numthread, lc.shmemsize);
+        break;
       }
     }
     break;
@@ -875,14 +900,20 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
 
   double alpha = 1;
   double beta = 0;
-  if( alphaPtr && plan.sizeofType == 4 )
-     alpha = *((float*)alphaPtr);
-  if( alphaPtr && plan.sizeofType == 8 )
-     alpha = *((double*)alphaPtr);
-  if( betaPtr && plan.sizeofType == 4 )
-     beta = *((float*)betaPtr);
-  if( betaPtr && plan.sizeofType == 8 )
-     beta = *((double*)betaPtr);
+  if (alphaPtr) {
+     switch (plan.sizeofType) {
+     case 2 : alpha = *((__half*)alphaPtr); break;
+     case 4 : alpha = *((float*)alphaPtr); break;
+     case 8 : alpha = *((double*)alphaPtr); break;
+     }
+  }
+  if (betaPtr) {
+     switch (plan.sizeofType) {
+     case 2 : beta = *((__half*)betaPtr); break;
+     case 4 : beta = *((float*)betaPtr); break;
+     case 8 : beta = *((double*)betaPtr); break;
+     }
+  }
 
   switch(ts.method) {
     case Trivial:
@@ -904,7 +935,15 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
       (ts.volMmk, ts.volMbar, ts.sizeMmk, ts.sizeMbar, \
       plan.Mmk, plan.Mbar, plan.Msh, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
 #define CALL(ICASE) case ICASE: \
-         if (plan.sizeofType == 4) { \
+         if (plan.sizeofType == 2) { \
+            if (beta == 0) { \
+               CALL0(__half,  ICASE, true); \
+            } \
+            else { \
+               CALL0(__half,  ICASE, false); \
+            } \
+         } \
+         else if (plan.sizeofType == 4) { \
             if (beta == 0) { \
                CALL0(float,  ICASE, true); \
             } \
@@ -912,7 +951,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
                CALL0(float,  ICASE, false); \
             } \
          } \
-         if (plan.sizeofType == 8) { \
+         else if (plan.sizeofType == 8) { \
             if (beta == 0) { \
                CALL0(double, ICASE, true); \
             } \
@@ -940,7 +979,15 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
       (ts.splitDim, ts.volMmkUnsplit, ts. volMbar, ts.sizeMmk, ts.sizeMbar, \
         plan.cuDimMm, plan.cuDimMk, plan.Mmk, plan.Mbar, plan.Msh, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
 #define CALL(ICASE) case ICASE: \
-         if (plan.sizeofType == 4) { \
+         if (plan.sizeofType == 2) { \
+            if (beta == 0) { \
+               CALL0(__half,  ICASE, true); \
+            } \
+            else { \
+               CALL0(__half,  ICASE, false); \
+            } \
+         } \
+         else if (plan.sizeofType == 4) { \
             if (beta == 0) { \
                CALL0(float,  ICASE, true); \
             } \
@@ -948,7 +995,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
                CALL0(float,  ICASE, false); \
             } \
          } \
-         if (plan.sizeofType == 8) { \
+         else if (plan.sizeofType == 8) { \
             if (beta == 0) { \
                CALL0(double, ICASE, true); \
             } \
@@ -974,7 +1021,15 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
       transposeTiled<TYPE, betaIsZero> <<< lc.numblock, lc.numthread, 0, plan.stream >>> \
       (((ts.volMm - 1)/TILEDIM + 1), ts.volMbar, ts.sizeMbar, plan.tiledVol, plan.cuDimMk, plan.cuDimMm, \
         plan.Mbar, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
-      if (plan.sizeofType == 4) { 
+      if (plan.sizeofType == 2) {
+         if(beta == 0) {
+            CALL(__half, true);
+         }
+         else {
+            CALL(__half, false);
+         }
+      }
+      else if (plan.sizeofType == 4) { 
          if(beta == 0) { 
             CALL(float, true);
          }
@@ -982,7 +1037,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
             CALL(float, false);
          }
       }
-      if (plan.sizeofType == 8) {
+      else if (plan.sizeofType == 8) {
          if(beta == 0) {
             CALL(double, true);
          }
@@ -1000,7 +1055,15 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
       transposeTiledCopy<TYPE, betaIsZero> <<< lc.numblock, lc.numthread, 0, plan.stream >>> \
       (((ts.volMm - 1)/TILEDIM + 1), ts.volMbar, ts.sizeMbar, plan.cuDimMk, plan.cuDimMm, plan.tiledVol, \
         plan.Mbar, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
-      if (plan.sizeofType == 4) { 
+      if (plan.sizeofType == 2) {
+         if(beta == 0) {
+            CALL(__half, true);
+         }
+         else {
+            CALL(__half, false);
+         }
+      }
+      else if (plan.sizeofType == 4) { 
          if(beta == 0) {
             CALL(float, true);
          }
@@ -1008,7 +1071,7 @@ bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const voi
             CALL(float, false);
          }
       }
-      if (plan.sizeofType == 8) { 
+      else if (plan.sizeofType == 8) { 
          if(beta == 0) {
             CALL(double, true);
          }
