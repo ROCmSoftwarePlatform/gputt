@@ -781,28 +781,6 @@ std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& pla
   return bestIt;
 }
 
-void printMatlab(gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans, std::vector<double>& times) {
-  static int count = 0;
-  count++;
-  int i = 0;
-  // Conversion factor from wallclok time to total number of cycles = (GPU clock in Hz) x #SM
-  double freq_SM = (double)(prop.clockRate*1000)*(double)prop.multiProcessorCount;
-  for (auto it=plans.begin();it != plans.end();it++,i++) {
-    TensorSplit& ts = it->tensorSplit;
-    LaunchConfig& lc = it->launchConfig;
-    if (ts.method == gputtTransposeMethodPacked || ts.method == gputtTransposeMethodPackedSplit ||
-      ts.method == gputtTransposeMethodTiled || ts.method == gputtTransposeMethodTiledCopy)
-    {
-      int numthread = lc.numthread.x*lc.numthread.y*lc.numthread.z;
-      printf("MATLAB %d %d %d %d %1.3f %d %d %d %d %d %d %d %d %d %d %d %d %d %e %e\n", count, ts.method,
-        it->num_iter, numthread, it->mlp, it->numActiveBlock,
-        it->gld_req, it->gst_req, it->gld_tran, it->gst_tran, 
-        it->sld_req, it->sst_req, it->sld_tran, it->sst_tran,
-        it->cl_full_l2, it->cl_part_l2, it->cl_full_l1, it->cl_part_l1, times[i]*freq_SM, it->cycles);
-    }
-  }
-}
-
 void LaunchConfig::print() {
   printf("numthread %d %d %d numblock %d %d %d shmemsize %d numRegStorage %d\n",
     numthread.x, numthread.y, numthread.z,
