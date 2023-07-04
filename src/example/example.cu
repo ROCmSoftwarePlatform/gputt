@@ -47,21 +47,27 @@ static void check(D &dim, T &idata, T &odata) {
           // Compare with gpuTT's output element.
           auto out = odata[d1 * dim[2] * dim[0] * dim[3] +
                            d2 * dim[0] * dim[3] + d0 * dim[3] + d3];
+#if 1
           if (out != out2) {
             std::cout << "Output elements mismatch at [" << d0 << "][" << d1
                       << "][" << d2 << "][" << d3 << "]: " << out
                       << " != " << out2 << std::endl;
             exit(-1);
           }
+#endif
         }
 
   if (memcmp(odata.data(), odata2.data(), odata.size() * sizeof(odata[0]))) {
     fprintf(stderr, "Output tensors mismatch\n");
+#if 1
     exit(-1);
+#endif
   }
 }
 
 template <typename T> static void test() {
+  std::cout << "Testing for type size = " << sizeof(T) << std::endl;
+  
   // Four dimensional tensor
   // Transpose (31, 549, 2, 3) -> (3, 31, 2, 549)
   int dim[4] = {31, 549, 2, 3};
@@ -77,7 +83,7 @@ template <typename T> static void test() {
 
   // Option 1: Create plan on NULL stream and choose the method manually.
   for (int i = 0; i < NumTransposeMethods; i++) {
-    auto method = static_cast<gputtTransposeMethod_t>(i);
+    auto method = static_cast<gputtTransposeMethod>(i);
 
     // Only use the methods that are supported for the given parameters.
     if (GPUTT_SUCCESS ==
@@ -102,6 +108,10 @@ template <typename T> static void test() {
 
     T *odataGPU;
     GPU_ERR_CHECK(gpuMalloc(&odataGPU, odata.size() * sizeof(odata[0])));
+
+    gputtTransposeMethod method;
+    GPUTT_ERR_CHECK(gputtPlanMethod(plan, &method));
+    std::cout << "Testing method " << method << std::endl;
 
     // Execute plan
     GPUTT_ERR_CHECK(gputtExecute(plan, idataGPU, odataGPU));

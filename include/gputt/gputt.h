@@ -45,10 +45,10 @@ typedef enum GPUTT_API gputtResult_t {
   GPUTT_SUCCESS,           // Success
   GPUTT_INVALID_PLAN,      // Invalid plan handle
   GPUTT_INVALID_PARAMETER, // Invalid input parameter
-  GPUTT_INVALID_DEVICE,  // Execution tried on device different than where plan
-                         // was created
-  GPUTT_INTERNAL_ERROR,  // Internal error
-  GPUTT_UNDEFINED_ERROR, // Undefined error
+  GPUTT_INVALID_DEVICE,    // Execution tried on device different than where plan
+                           // was created
+  GPUTT_INTERNAL_ERROR,    // Internal error
+  GPUTT_UNDEFINED_ERROR,   // Undefined error
   GPUTT_UNSUPPORTED_METHOD // Selected method is not supported for the given
                            // parameters
 } gputtResult;
@@ -127,7 +127,7 @@ gputtResult GPUTT_API gputtDestroy(gputtHandle handle);
 // \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
 //
 // Parameters
-// handle            = Returned handle to gpuTT plan
+// handle            = Handle to the gpuTT plan
 // idata             = Input data size product(dim)
 // odata             = Output data size product(dim)
 // alpha             = scalar for input
@@ -139,5 +139,18 @@ gputtResult GPUTT_API gputtDestroy(gputtHandle handle);
 gputtResult GPUTT_API gputtExecute(gputtHandle handle, const void *idata,
                                    void *odata, const void *alpha = NULL,
                                    const void *beta = NULL);
+
+//
+// Get method used for a plan
+//
+// Parameters
+// handle            = Returned handle to gpuTT plan
+// method            = Returned method of gpuTT plan
+// 
+// Returns
+// Success/unsuccess code
+//
+gputtResult GPUTT_API gputtPlanMethod(gputtHandle handle,
+                                      gputtTransposeMethod *method);
 
 #endif // GPUTT_H

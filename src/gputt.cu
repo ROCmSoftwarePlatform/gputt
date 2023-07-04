@@ -223,7 +223,7 @@ gputtResult gputtPlan(gputtHandle *handle, int rank, const int *dim,
   gpuRangeStart("rest");
 #endif
 
-#if 1
+#if 0
   bestPlan.print();
 #endif
   // Create copy of the plan outside the list
@@ -386,6 +386,19 @@ gputtResult gputtDestroy(gputtHandle handle) {
   delete it->second;
   // Delete entry from plan storage
   planStorage.erase(it);
+  return GPUTT_SUCCESS;
+}
+
+gputtResult gputtPlanMethod(gputtHandle handle,
+                            gputtTransposeMethod *method) {
+  // prevent modification when find
+  std::lock_guard<std::mutex> lock(planStorageMutex);
+  auto it = planStorage.find(handle);
+  if (it == planStorage.end())
+    return GPUTT_INVALID_PLAN;
+
+  gputtPlan_t &plan = *(it->second);
+  *method = plan.tensorSplit.method;
   return GPUTT_SUCCESS;
 }
 
