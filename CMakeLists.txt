@@ -44,7 +44,6 @@ message(WARNING "Prior to 3.24, the HIP language is not fully integrated into CM
 	"we have to use more ugly ways...")
 set(HIP_COMPAT_ENABLED 1)
 endif()
-check_language(CUDA)
 
 if(CMAKE_HIP_COMPILER OR HIP_COMPAT_ENABLED)
 
@@ -60,8 +59,9 @@ if(NOT DEFINED HIP_PATH)
     endif()
 endif()
 set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
-find_package(hip REQUIRED)
+find_package(hip)
 
+if (HIP_FOUND)
 set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodeview" ${CMAKE_HIP_FLAGS})
 
 if (HIP_COMPAT_ENABLED)
@@ -77,13 +77,18 @@ set_source_files_properties(${${PROJECT_NAME}_SOURCE_FILES} PROPERTIES LANGUAGE 
 set_source_files_properties(${${PROJECT_NAME}_bench_SOURCE_FILES} PROPERTIES LANGUAGE ${HIP_LANGUAGE})
 set_source_files_properties(${${PROJECT_NAME}_test_SOURCE_FILES} PROPERTIES LANGUAGE ${HIP_LANGUAGE})
 set_source_files_properties(${${PROJECT_NAME}_example_SOURCE_FILES} PROPERTIES LANGUAGE ${HIP_LANGUAGE})
-elseif(CMAKE_CUDA_COMPILER)
+endif()
+endif()
+
+check_language(CUDA)
+
+if(CMAKE_CUDA_COMPILER AND (NOT HIP_FOUND))
 
 enable_language(CUDA)
 
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -O0" ${CMAKE_CUDA_FLAGS})
 
-else()
+else(NOT HIP_FOUND)
 
 message(FATAL_ERROR "CUDA or HIP backend must be available, aborting")
 
@@ -99,7 +104,11 @@ endif()
 add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCE_FILES})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+if (CMAKE_VERSION GREATER_EQUAL 3.24)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES native)
+else()
+set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_ARCHITECTURES 61)
+endif()
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/gputt>  
