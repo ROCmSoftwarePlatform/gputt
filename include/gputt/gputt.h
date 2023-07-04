@@ -48,11 +48,12 @@ typedef enum GPUTT_API gputtResult_t {
   GPUTT_INVALID_DEVICE,     // Execution tried on device different than where plan was created
   GPUTT_INTERNAL_ERROR,     // Internal error
   GPUTT_UNDEFINED_ERROR,    // Undefined error
+  GPUTT_UNSUPPORTED_METHOD  // Selected method is not supported for the given parameters
 } gputtResult;
 
 // Transposing methods
 typedef enum GPUTT_API gputtTransposeMethod_t {
-  gputtTransposeMethodUnknown,
+  gputtTransposeMethodUnknown = 0,
   gputtTransposeMethodTrivial,
   gputtTransposeMethodPacked,
   gputtTransposeMethodPackedSplit,
