@@ -33,7 +33,16 @@ SOFTWARE.
 // Size of the shared memory tile used in some algorithms.
 // This parameter is associated with the warp (wavefront) size,
 // and is therefore device-specific.
+#if defined(__CUDACC__)
+// Needs to be a literal constant for CUDA version, due to the use
+// in the __launch_bounds__ attribute. HIP probably ignores __launch_bounds__,
+// and therefore has no problem with it.
+#define TILEDIM 32
+#elif defined(__HIPCC__)
+// AMD has released GPUs with different wavefront sizes: 64 and 32.
+// So it's important to have the warpSize here as a parameter.
 #define TILEDIM warpSize
+#endif
 
 const int TILEROWS = 8;
 
