@@ -39,6 +39,13 @@ SOFTWARE.
 #include <cuda_fp16.h>
 #endif
 
+#define clz(x) __builtin_clz(x)
+
+static int32_t ilog2(uint32_t x)
+{
+    return sizeof(uint32_t) * CHAR_BIT - clz(x) - 1;
+}
+
 //
 // Transpose when Mm and Mk don't overlap and contain only single rank
 //
@@ -654,7 +661,7 @@ int getNumActiveBlock(const int method, const int sizeofType,
       exit(1);
     }
     int key_reg = (lc.numRegStorage - 1);
-    int key_type = (sizeofType == 4);
+    int key_type = ilog2(sizeofType);
     unsigned long long int key =
         (unsigned long long int)(lc.shmemsize / sizeofType) * MAX_NUMWARP *
             MAX_REG_STORAGE * MAX_NUMTYPE * numDevices +
