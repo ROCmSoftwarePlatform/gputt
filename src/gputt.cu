@@ -174,6 +174,10 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
     bestPlan = *it;
   }
   else {
+    // One method could be a fit for a given problem multiple times,
+    // with different parameters. Therefore, we use heuristic to select
+    // the best plan out of multiple plans with the same method.
+
     // Find all plans for the chosen method.
     std::list<gputtPlan_t> plansForMethod;
     for (auto& plan : plans) {
