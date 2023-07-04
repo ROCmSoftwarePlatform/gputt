@@ -711,8 +711,8 @@ bool gputtPlan_t::createPlans(const int rank, const int* dim, const int* permuta
   return true;
 }
 
-bool operator>(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
-
+bool gputtPlan_t::operator>(const gputtPlan_t& rhs) const {
+  const gputtPlan_t& lhs = *this;
   const TensorSplit& lts = lhs.tensorSplit;
   const TensorSplit& rts = rhs.tensorSplit;
 
@@ -760,25 +760,9 @@ bool operator>(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
   // }
 }
 
-bool operator<(const gputtPlan_t& lhs, const gputtPlan_t& rhs) {
+bool gputtPlan_t::operator<(const gputtPlan_t& rhs) const {
+  const gputtPlan_t& lhs = *this;
   return !(lhs > rhs);
-}
-
-//
-// Returns best plan according to heuristic criteria
-// Returns plans.end() on invalid input or when nothing can be chosen
-//
-std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& plans) {
-
-  // Choose the "largest" plan
-  auto bestIt = plans.end();
-  for (auto it=plans.begin();it != plans.end();it++) {
-    if (bestIt == plans.end() || *bestIt < *it) {
-      bestIt = it;
-    }
-  }
-
-  return bestIt;
 }
 
 void LaunchConfig::print() {

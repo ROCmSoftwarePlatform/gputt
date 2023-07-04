@@ -197,6 +197,9 @@ public:
     const int redRank, const int* redDim, const int* redPermutation,
     const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
 
+  bool operator>(const gputtPlan_t& rhs) const;
+  bool operator<(const gputtPlan_t& rhs) const;
+
 private:
   static bool createTrivialPlans(const int rank, const int* dim, const int* permutation,
     const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
@@ -219,11 +222,7 @@ private:
 
 };
 
-void printMatlab(gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans, std::vector<double>& times);
-
 void reduceRanks(const int rank, const int* dim, const int* permutation,
   std::vector<int>& redDim, std::vector<int>& redPermutation);
-
-std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& plans);
 
 #endif // GPUTTPLAN_H

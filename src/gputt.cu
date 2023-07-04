@@ -89,6 +89,23 @@ static gputtResult gputtPlanCheckInput(int rank, const int* dim, const int* perm
   return GPUTT_SUCCESS;
 }
 
+//
+// Returns best plan according to heuristic criteria
+// Returns plans.end() on invalid input or when nothing can be chosen
+//
+static std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& plans) {
+
+  // Choose the "largest" plan
+  auto bestIt = plans.end();
+  for (auto it = plans.begin();it != plans.end();it++) {
+    if (bestIt == plans.end() || *bestIt < *it) {
+      bestIt = it;
+    }
+  }
+
+  return bestIt;
+}
+
 gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
   gpuStream_t stream, gputtTransposeMethod method) {
 
