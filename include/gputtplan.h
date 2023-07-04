@@ -25,8 +25,9 @@ SOFTWARE.
 #ifndef GPUTTPLAN_H
 #define GPUTTPLAN_H
 
+#include "gputt.h"
 #include "gputt_runtime.h"
-#include <list>
+#include <map>
 #include <vector>
 #include "gputtTypes.h"
 
@@ -195,26 +196,32 @@ public:
 
   static bool createPlans(const int rank, const int* dim, const int* permutation,
     const int redRank, const int* redDim, const int* redPermutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+    std::map<gputtTransposeMethod, gputtPlan_t>& plans);
 
   bool operator>(const gputtPlan_t& rhs) const;
   bool operator<(const gputtPlan_t& rhs) const;
 
 private:
   static bool createTrivialPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+    std::map<gputtTransposeMethod, gputtPlan_t>& plans);
 
   static bool createTiledPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+    std::map<gputtTransposeMethod, gputtPlan_t>& plans);
 
   static bool createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+    std::map<gputtTransposeMethod, gputtPlan_t>& plans);
 
   static bool createPackedPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+    std::map<gputtTransposeMethod, gputtPlan_t>& plans);
 
   static bool createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+    std::map<gputtTransposeMethod, gputtPlan_t>& plans);
 
   bool setup(const int rank_in, const int* dim, const int* permutation,
     const size_t sizeofType_in, const TensorSplit& tensorSplit_in,

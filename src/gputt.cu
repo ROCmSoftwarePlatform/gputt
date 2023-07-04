@@ -93,12 +93,12 @@ static gputtResult gputtPlanCheckInput(int rank, const int* dim, const int* perm
 // Returns best plan according to heuristic criteria
 // Returns plans.end() on invalid input or when nothing can be chosen
 //
-static std::list<gputtPlan_t>::iterator choosePlanHeuristic(std::list<gputtPlan_t>& plans) {
-
+static std::map<gputtTransposeMethod, gputtPlan_t>::const_iterator choosePlanHeuristic(
+  const std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
   // Choose the "largest" plan
   auto bestIt = plans.end();
-  for (auto it = plans.begin();it != plans.end();it++) {
-    if (bestIt == plans.end() || *bestIt < *it) {
+  for (auto it = plans.begin(); it != plans.end(); it++) {
+    if (bestIt == plans.end() || bestIt->second < it->second) {
       bestIt = it;
     }
   }
@@ -137,43 +137,44 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   std::vector<int> redPermutation;
   reduceRanks(rank, dim, permutation, redDim, redPermutation);
 
-  // Create plans from reduced ranks
-  std::list<gputtPlan_t> plans;
-  // if (rank != redDim.size()) {
-  //   if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), sizeofType, prop, plans)) return GPUTT_INTERNAL_ERROR;
-  // }
+#ifdef ENABLE_NVTOOLS
+    gpuRangeStop();
+    gpuRangeStart("createPlans");
+#endif
 
-  // // Create plans from non-reduced ranks
-  // if (!createPlans(rank, dim, permutation, sizeofType, prop, plans)) return GPUTT_INTERNAL_ERROR;
+  // Create all supported plans for the specified problem dimensions.
+  std::map<gputtTransposeMethod, gputtPlan_t> plans;
+  if (!gputtPlan_t::createPlans(rank, dim, permutation,
+    redDim.size(), redDim.data(), redPermutation.data(), 
+    sizeofType, deviceID, prop, plans))
+    return GPUTT_INTERNAL_ERROR;
 
 #if 0
   if (!gputtKernelDatabase(deviceID, prop)) return GPUTT_INTERNAL_ERROR;
 #endif
 
+  // Use heuristic to choose the best plan, if not already
+  // provided by the user.
+  gputtPlan_t bestPlan;
+  if (method == gputtTransposeMethodUnknown) {
 #ifdef ENABLE_NVTOOLS
-  gpuRangeStop();
-  gpuRangeStart("createPlans");
+    gpuRangeStop();
+    gpuRangeStart("countCycles");
 #endif
 
-  // std::chrono::high_resolution_clock::time_point plan_start;
-  // plan_start = std::chrono::high_resolution_clock::now();
+    // Calculate the estimated number of cycles for each plan.
+    for (auto& plan : plans) {
+      if (!plan.second.countCycles(prop, 10)) return GPUTT_INTERNAL_ERROR;
+    }
 
-  if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
-    sizeofType, deviceID, prop, plans)) return GPUTT_INTERNAL_ERROR;
-
-  // std::chrono::high_resolution_clock::time_point plan_end;
-  // plan_end = std::chrono::high_resolution_clock::now();
-  // double plan_duration = std::chrono::duration_cast< std::chrono::duration<double> >(plan_end - plan_start).count();
-  // printf("createPlans took %lf ms\n", plan_duration*1000.0);
-
-#ifdef ENABLE_NVTOOLS
-  gpuRangeStop();
-  gpuRangeStart("countCycles");
-#endif
-
-  // Count cycles
-  for (auto it=plans.begin();it != plans.end();it++) {
-    if (!it->countCycles(prop, 10)) return GPUTT_INTERNAL_ERROR;
+    // Choose the best plan based on the number of cycles.
+    auto it = choosePlanHeuristic(plans);
+    if (it == plans.end()) return GPUTT_INTERNAL_ERROR;
+    
+    bestPlan = it->second;
+  }
+  else {
+    bestPlan = plans[method];
   }
 
 #ifdef ENABLE_NVTOOLS
@@ -181,19 +182,16 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   gpuRangeStart("rest");
 #endif
 
-  // Choose the plan
-  std::list<gputtPlan_t>::iterator bestPlan = choosePlanHeuristic(plans);
-  if (bestPlan == plans.end()) return GPUTT_INTERNAL_ERROR;
 #if 1
-  bestPlan->print();
+  bestPlan.print();
 #endif
   // Create copy of the plan outside the list
   gputtPlan_t* plan = new gputtPlan_t();
   // NOTE: No deep copy needed here since device memory hasn't been allocated yet
-  *plan = *bestPlan;
+  *plan = bestPlan;
   // Set device pointers to NULL in the old copy of the plan so
   // that they won't be deallocated later when the object is destroyed
-  bestPlan->nullDevicePointers();
+  bestPlan.nullDevicePointers();
 
   // Set stream
   plan->setStream(stream);
@@ -244,7 +242,7 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
   reduceRanks(rank, dim, permutation, redDim, redPermutation);
 
   // Create plans from reduced ranks
-  std::list<gputtPlan_t> plans;
+  std::map<gputtTransposeMethod, gputtPlan_t> plans;
 #if 0
   // if (rank != redDim.size()) {
     if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), sizeofType, prop, plans)) return GPUTT_INTERNAL_ERROR;
@@ -273,13 +271,13 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
   std::vector<double> times;
   for (auto it=plans.begin();it != plans.end();it++) {
     // Activate plan
-    it->activate();
+    it->second.activate();
     // Clear output data to invalidate caches
     set_device_array<char>((char *)odata, -1, numBytes);
     gpuCheck(gpuDeviceSynchronize());
     timer.start();
     // Execute plan
-    if (!gputtKernel(*it, idata, odata, alpha, beta)) return GPUTT_INTERNAL_ERROR;
+    if (!gputtKernel(it->second, idata, odata, alpha, beta)) return GPUTT_INTERNAL_ERROR;
     timer.stop();
     double curTime = timer.seconds();
     // it->print();
@@ -300,10 +298,10 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
 
   // Create copy of the plan outside the list
   gputtPlan_t* plan = new gputtPlan_t();
-  *plan = *bestPlan;
+  *plan = bestPlan->second;
   // Set device pointers to NULL in the old copy of the plan so
   // that they won't be deallocated later when the object is destroyed
-  bestPlan->nullDevicePointers();
+  bestPlan->second.nullDevicePointers();
 
   // Set stream
   plan->setStream(stream);

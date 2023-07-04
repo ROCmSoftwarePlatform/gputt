@@ -479,15 +479,16 @@ size_t TensorSplit::shmemAlloc(int sizeofType) const {
 //
 // Returns true if the plan with TensorSplit ts already exists
 //
-bool planExists(TensorSplit& ts, std::list<gputtPlan_t>& plans) {
-  for (auto it=plans.begin();it != plans.end();it++) {
-    if (it->tensorSplit == ts) return true;
+bool planExists(TensorSplit& ts, std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
+  for (auto it = plans.begin(); it != plans.end(); it++) {
+    if (it->second.tensorSplit == ts) return true;
   }
   return false;
 }
 
 bool gputtPlan_t::createTrivialPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+  std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
 
   if (rank == 1) {
     TensorSplit ts;
@@ -498,7 +499,7 @@ bool gputtPlan_t::createTrivialPlans(const int rank, const int* dim, const int* 
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
       gputtPlan_t plan;
       if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
-      plans.push_back(plan);
+      plans.emplace(gputtTransposeMethodTrivial, plan);
     }
   }
 
@@ -506,7 +507,8 @@ bool gputtPlan_t::createTrivialPlans(const int rank, const int* dim, const int* 
 }
 
 bool gputtPlan_t::createTiledPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+  std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
 
   if (permutation[0] != 0 && rank > 1) {
     TensorSplit ts;
@@ -517,7 +519,7 @@ bool gputtPlan_t::createTiledPlans(const int rank, const int* dim, const int* pe
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
       gputtPlan_t plan;
       if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
-      plans.push_back(plan);
+      plans.emplace(gputtTransposeMethodTiled, plan);
     }
   }
 
@@ -525,7 +527,8 @@ bool gputtPlan_t::createTiledPlans(const int rank, const int* dim, const int* pe
 }
 
 bool gputtPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+  std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
 
   // Count number of Mm and Mk which are the same
   int numMmMkSame = 0;
@@ -546,7 +549,7 @@ bool gputtPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
       gputtPlan_t plan;
       if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
-      plans.push_back(plan);
+      plans.emplace(gputtTransposeMethodTiledCopy, plan);
     }
   }
 
@@ -554,7 +557,8 @@ bool gputtPlan_t::createTiledCopyPlans(const int rank, const int* dim, const int
 }
 
 bool gputtPlan_t::createPackedPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+  std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
 
   LaunchConfig lc;
   for (int numMm=1;numMm < rank;numMm++) {
@@ -568,7 +572,7 @@ bool gputtPlan_t::createPackedPlans(const int rank, const int* dim, const int* p
       if (!planExists(ts, plans)) {
         gputtPlan_t plan;
         if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc, numActiveBlock)) return false;
-        plans.push_back(plan);
+        plans.emplace(gputtTransposeMethodPacked, plan);
       }
     }
   }
@@ -577,7 +581,8 @@ bool gputtPlan_t::createPackedPlans(const int rank, const int* dim, const int* p
 }
 
 bool gputtPlan_t::createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
-  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+  std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
 
   LaunchConfig lc;
   for (int numMm=1;numMm < rank;numMm++) {
@@ -660,7 +665,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
         if (!planExists(ts, plans) && dim0 < dim_cutoff) {
           gputtPlan_t plan;
           if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc0, numActiveBlock0)) return false;
-          plans.push_back(plan);
+          plans.emplace(gputtTransposeMethodPackedSplit, plan);
         }
         if (bestNumSplit1 != bestNumSplit0) {
           ts.numSplit = bestNumSplit1;
@@ -669,7 +674,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
           if (!planExists(ts, plans) && dim1 < dim_cutoff) {
             gputtPlan_t plan;
             if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc1, numActiveBlock1)) return false;
-            plans.push_back(plan);
+            plans.emplace(gputtTransposeMethodPackedSplit, plan);
           }
         }
         if (bestNumSplit2 != bestNumSplit0 && bestNumSplit2 != bestNumSplit1) {
@@ -679,7 +684,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
           if (!planExists(ts, plans) && dim2 < dim_cutoff) {
             gputtPlan_t plan;
             if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc2, numActiveBlock2)) return false;
-            plans.push_back(plan);
+            plans.emplace(gputtTransposeMethodPackedSplit, plan);
           }
         }
       }
@@ -694,7 +699,8 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int* dim, const i
 //
 bool gputtPlan_t::createPlans(const int rank, const int* dim, const int* permutation,
   const int rankRed, const int* dimRed, const int* permutationRed,
-  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans) {
+  const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop,
+  std::map<gputtTransposeMethod, gputtPlan_t>& plans) {
 
   size_t size0 = plans.size();
   /* if (!createTiledCopyPlans(rank, dim, permutation, sizeofType, deviceID, prop, plans)) return false;*/
