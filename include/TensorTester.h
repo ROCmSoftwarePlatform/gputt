@@ -38,25 +38,26 @@ struct TensorError_t {
 
 class TensorTester {
 private:
-  static int calcTensorConv(const int rank, const int* dim, const int* permutation, TensorConv* tensorConv);
+  static int calcTensorConv(const int rank, const int *dim,
+                            const int *permutation, TensorConv *tensorConv);
 
   const int maxRank;
   const int maxNumblock;
 
 public:
-  TensorConv* h_tensorConv;
-  TensorConv* d_tensorConv;
-  TensorError_t* h_error;
-  TensorError_t* d_error;
-  int* d_fail;
+  TensorConv *h_tensorConv;
+  TensorConv *d_tensorConv;
+  TensorError_t *h_error;
+  TensorError_t *d_error;
+  int *d_fail;
 
   TensorTester();
   ~TensorTester();
 
-  void setTensorCheckPattern(unsigned int* data, unsigned int ndata);
-  
-  template<typename T> bool checkTranspose(int rank, int* dim, int* permutation, T* data);
+  void setTensorCheckPattern(unsigned int *data, unsigned int ndata);
 
+  template <typename T>
+  bool checkTranspose(int rank, int *dim, int *permutation, T *data);
 };
 
 #endif // TENSORTESTER_H

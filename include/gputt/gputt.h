@@ -42,13 +42,15 @@ typedef unsigned int gputtHandle;
 
 // Return value
 typedef enum GPUTT_API gputtResult_t {
-  GPUTT_SUCCESS,            // Success
-  GPUTT_INVALID_PLAN,       // Invalid plan handle
-  GPUTT_INVALID_PARAMETER,  // Invalid input parameter
-  GPUTT_INVALID_DEVICE,     // Execution tried on device different than where plan was created
-  GPUTT_INTERNAL_ERROR,     // Internal error
-  GPUTT_UNDEFINED_ERROR,    // Undefined error
-  GPUTT_UNSUPPORTED_METHOD  // Selected method is not supported for the given parameters
+  GPUTT_SUCCESS,           // Success
+  GPUTT_INVALID_PLAN,      // Invalid plan handle
+  GPUTT_INVALID_PARAMETER, // Invalid input parameter
+  GPUTT_INVALID_DEVICE,  // Execution tried on device different than where plan
+                         // was created
+  GPUTT_INTERNAL_ERROR,  // Internal error
+  GPUTT_UNDEFINED_ERROR, // Undefined error
+  GPUTT_UNSUPPORTED_METHOD // Selected method is not supported for the given
+                           // parameters
 } gputtResult;
 
 // Transposing methods
@@ -72,14 +74,17 @@ typedef enum GPUTT_API gputtTransposeMethod_t {
 // permutation[rank] = Transpose permutation
 // sizeofType        = Size of the elements of the tensor in bytes (=2, 4 or 8)
 // stream            = CUDA stream (0 if no stream is used)
-// method            = Transpose method to use (will be chosen based on heuristic, if Unknown - default)
+// method            = Transpose method to use (will be chosen based on
+// heuristic, if Unknown - default)
 //
 //
 // Returns
 // Success/unsuccess code
-// 
-gputtResult GPUTT_API gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  gpuStream_t stream, gputtTransposeMethod method = gputtTransposeMethodUnknown);
+//
+gputtResult GPUTT_API
+gputtPlan(gputtHandle *handle, int rank, const int *dim, const int *permutation,
+          size_t sizeofType, gpuStream_t stream,
+          gputtTransposeMethod method = gputtTransposeMethodUnknown);
 
 //
 // Create plan and choose implementation by measuring performance
@@ -96,23 +101,30 @@ gputtResult GPUTT_API gputtPlan(gputtHandle* handle, int rank, const int* dim, c
 //
 // Returns
 // Success/unsuccess code
-// 
-gputtResult GPUTT_API gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  gpuStream_t stream, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
+//
+gputtResult GPUTT_API gputtPlanMeasure(gputtHandle *handle, int rank,
+                                       const int *dim, const int *permutation,
+                                       size_t sizeofType, gpuStream_t stream,
+                                       const void *idata, void *odata,
+                                       const void *alpha = NULL,
+                                       const void *beta = NULL);
 
 //
 // Destroy plan
 //
 // Parameters
 // handle            = Handle to the gpuTT plan
-// 
+//
 // Returns
 // Success/unsuccess code
 //
 gputtResult GPUTT_API gputtDestroy(gputtHandle handle);
 
 //
-// Execute plan out-of-place; performs a tensor transposition of the form \f[ \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha * \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta * \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
+// Execute plan out-of-place; performs a tensor transposition of the form \f[
+// \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})} \gets \alpha *
+// \mathcal{A}_{i_0,i_1,...,i_{d-1}} + \beta *
+// \mathcal{B}_{\pi(i_0,i_1,...,i_{d-1})}, \f]
 //
 // Parameters
 // handle            = Returned handle to gpuTT plan
@@ -120,11 +132,12 @@ gputtResult GPUTT_API gputtDestroy(gputtHandle handle);
 // odata             = Output data size product(dim)
 // alpha             = scalar for input
 // beta              = scalar for output
-// 
+//
 // Returns
 // Success/unsuccess code
 //
-gputtResult GPUTT_API gputtExecute(gputtHandle handle, const void* idata, void* odata, const void* alpha = NULL, const void* beta = NULL);
+gputtResult GPUTT_API gputtExecute(gputtHandle handle, const void *idata,
+                                   void *odata, const void *alpha = NULL,
+                                   const void *beta = NULL);
 
 #endif // GPUTT_H
-

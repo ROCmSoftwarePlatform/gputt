@@ -67,9 +67,11 @@ double Timer::seconds() {
 #ifdef CUDA_EVENT_TIMER
   float ms;
   gpuCheck(gpuEventElapsedTime(&ms, tmstart, tmend));
-  return (double)(ms/1000.0f);
+  return (double)(ms / 1000.0f);
 #else
-  return std::chrono::duration_cast< std::chrono::duration<double> >(tmend - tmstart).count();
+  return std::chrono::duration_cast<std::chrono::duration<double>>(tmend -
+                                                                   tmstart)
+      .count();
 #endif
 }
 
@@ -86,11 +88,12 @@ gputtTimer::~gputtTimer() {}
 //
 // Start timer
 //
-void gputtTimer::start(std::vector<int>& dim, std::vector<int>& permutation) {
+void gputtTimer::start(std::vector<int> &dim, std::vector<int> &permutation) {
   curDim = dim;
   curPermutation = permutation;
-  curBytes = sizeofType*2;   // "2x" because every element is read and also written out
-  for (int i=0;i < curDim.size();i++) {
+  curBytes =
+      sizeofType * 2; // "2x" because every element is read and also written out
+  for (int i = 0; i < curDim.size(); i++) {
     curBytes *= dim[i];
   }
   ranks.insert(curDim.size());
@@ -110,7 +113,7 @@ void gputtTimer::stop() {
     auto retval = stats.insert(new_elem);
     it = retval.first;
   }
-  Stat& stat = it->second;
+  Stat &stat = it->second;
   stat.totBW += bandwidth;
   if (bandwidth < stat.minBW) {
     stat.minBW = bandwidth;
@@ -124,9 +127,7 @@ void gputtTimer::stop() {
 //
 // Returns the duration of the last run in seconds
 //
-double gputtTimer::seconds() {
-  return timer.seconds();
-}
+double gputtTimer::seconds() { return timer.seconds(); }
 
 //
 // Returns the bandwidth of the last run in GB/s
@@ -134,7 +135,7 @@ double gputtTimer::seconds() {
 double gputtTimer::GBs() {
   const double BILLION = 1000000000.0;
   double sec = seconds();
-  return (sec == 0.0) ? 0.0 : (double)(curBytes)/(BILLION*sec);
+  return (sec == 0.0) ? 0.0 : (double)(curBytes) / (BILLION * sec);
 }
 
 //
@@ -143,7 +144,7 @@ double gputtTimer::GBs() {
 double gputtTimer::GiBs() {
   const double iBILLION = 1073741824.0;
   double sec = seconds();
-  return (sec == 0.0) ? 0.0 : (double)(curBytes)/(iBILLION*sec);
+  return (sec == 0.0) ? 0.0 : (double)(curBytes) / (iBILLION * sec);
 }
 
 //
@@ -151,9 +152,10 @@ double gputtTimer::GiBs() {
 //
 double gputtTimer::getBest(int rank) {
   auto it = stats.find(rank);
-  if (it == stats.end()) return 0.0;
-  Stat& stat = it->second;
-  return stat.maxBW;  
+  if (it == stats.end())
+    return 0.0;
+  Stat &stat = it->second;
+  return stat.maxBW;
 }
 
 //
@@ -161,18 +163,21 @@ double gputtTimer::getBest(int rank) {
 //
 double gputtTimer::getWorst(int rank) {
   auto it = stats.find(rank);
-  if (it == stats.end()) return 0.0;
-  Stat& stat = it->second;
+  if (it == stats.end())
+    return 0.0;
+  Stat &stat = it->second;
   return stat.minBW;
 }
 
 //
 // Returns the worst performing tensor transpose for rank
 //
-double gputtTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& permutation) {
+double gputtTimer::getWorst(int rank, std::vector<int> &dim,
+                            std::vector<int> &permutation) {
   auto it = stats.find(rank);
-  if (it == stats.end()) return 0.0;
-  Stat& stat = it->second;
+  if (it == stats.end())
+    return 0.0;
+  Stat &stat = it->second;
   dim = stat.worstDim;
   permutation = stat.worstPermutation;
   return stat.minBW;
@@ -183,17 +188,21 @@ double gputtTimer::getWorst(int rank, std::vector<int>& dim, std::vector<int>& p
 //
 double gputtTimer::getMedian(int rank) {
   auto it = stats.find(rank);
-  if (it == stats.end()) return 0.0;
-  Stat& stat = it->second;
-  if (stat.BW.size() == 0) return 0.0;
+  if (it == stats.end())
+    return 0.0;
+  Stat &stat = it->second;
+  if (stat.BW.size() == 0)
+    return 0.0;
   // Set middle element in to correct position
-  std::nth_element(stat.BW.begin(), stat.BW.begin() + stat.BW.size()/2, stat.BW.end());
-  double median = stat.BW[stat.BW.size()/2];
+  std::nth_element(stat.BW.begin(), stat.BW.begin() + stat.BW.size() / 2,
+                   stat.BW.end());
+  double median = stat.BW[stat.BW.size() / 2];
   if (stat.BW.size() % 2 == 0) {
-    // For even number of elements, set middle - 1 element in to correct position
-    // and take average
-    std::nth_element(stat.BW.begin(), stat.BW.begin() + stat.BW.size()/2 - 1, stat.BW.end());
-    median += stat.BW[stat.BW.size()/2 - 1];
+    // For even number of elements, set middle - 1 element in to correct
+    // position and take average
+    std::nth_element(stat.BW.begin(), stat.BW.begin() + stat.BW.size() / 2 - 1,
+                     stat.BW.end());
+    median += stat.BW[stat.BW.size() / 2 - 1];
     median *= 0.5;
   }
   return median;
@@ -204,9 +213,10 @@ double gputtTimer::getMedian(int rank) {
 //
 double gputtTimer::getAverage(int rank) {
   auto it = stats.find(rank);
-  if (it == stats.end()) return 0.0;
-  Stat& stat = it->second;
-  return stat.totBW/(double)stat.BW.size();
+  if (it == stats.end())
+    return 0.0;
+  Stat &stat = it->second;
+  return stat.totBW / (double)stat.BW.size();
 }
 
 //
@@ -216,7 +226,7 @@ std::vector<double> gputtTimer::getData(int rank) {
   std::vector<double> res;
   auto it = stats.find(rank);
   if (it != stats.end()) {
-    Stat& stat = it->second;
+    Stat &stat = it->second;
     res = stat.BW;
   }
   return res;
@@ -225,10 +235,11 @@ std::vector<double> gputtTimer::getData(int rank) {
 //
 // Returns the worst performing tensor transpose of all
 //
-double gputtTimer::getWorst(std::vector<int>& dim, std::vector<int>& permutation) {
+double gputtTimer::getWorst(std::vector<int> &dim,
+                            std::vector<int> &permutation) {
   double worstBW = 1.0e20;
   int worstRank = 0;
-  for (auto it=ranks.begin(); it != ranks.end(); it++) {
+  for (auto it = ranks.begin(); it != ranks.end(); it++) {
     double bw = stats.find(*it)->second.minBW;
     if (worstBW > bw) {
       worstRank = *it;

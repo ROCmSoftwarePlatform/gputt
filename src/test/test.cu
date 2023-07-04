@@ -22,43 +22,46 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#include <vector>
-#include <algorithm>
-#include <ctime>           // std::time
-#include <cstring>         // strcmp
-#include <cmath>
-#include "gputt.h"
-#include "gputtUtils.h"
 #include "TensorTester.h"
+#include "gputt.h"
+#include "gputtGpuModel.h" // testCounters
 #include "gputtTimer.h"
-#include "gputtGpuModel.h"  // testCounters
+#include "gputtUtils.h"
+#include <algorithm>
+#include <cmath>
+#include <cstring> // strcmp
+#include <ctime>   // std::time
+#include <vector>
 
 //
 // Error checking wrapper for gputt
 //
-#define gputtCheck(stmt) do {                                 \
-  gputtResult err = stmt;                            \
-  if (err != GPUTT_SUCCESS) {                          \
-    fprintf(stderr, "%s in file %s, function %s\n", #stmt,__FILE__,__FUNCTION__); \
-    exit(1); \
-  }                                                  \
-} while(0)
+#define gputtCheck(stmt)                                                       \
+  do {                                                                         \
+    gputtResult err = stmt;                                                    \
+    if (err != GPUTT_SUCCESS) {                                                \
+      fprintf(stderr, "%s in file %s, function %s\n", #stmt, __FILE__,         \
+              __FUNCTION__);                                                   \
+      exit(1);                                                                 \
+    }                                                                          \
+  } while (0)
 
-gputtTimer* timerFloat;
-gputtTimer* timerDouble;
+gputtTimer *timerFloat;
+gputtTimer *timerDouble;
 
-long long int* dataIn  = NULL;
-long long int* dataOut = NULL;
-int dataSize  = 200000000;
-TensorTester* tester = NULL;
+long long int *dataIn = NULL;
+long long int *dataOut = NULL;
+int dataSize = 200000000;
+TensorTester *tester = NULL;
 
 bool test1();
 bool test2();
 bool test3();
 bool test4();
 bool test5();
-template <typename T> bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation);
-void printVec(std::vector<int>& vec);
+template <typename T>
+bool test_tensor(std::vector<int> &dim, std::vector<int> &permutation);
+void printVec(std::vector<int> &vec);
 
 int main(int argc, char *argv[]) {
 
@@ -86,7 +89,8 @@ int main(int argc, char *argv[]) {
   }
 
   gpuCheck(gpuDeviceReset());
-  gpuDeviceSetSharedMemConfig(gpuSharedMemBankSizeEightByte); // may fail, if unsupported
+  gpuDeviceSetSharedMemConfig(
+      gpuSharedMemBankSizeEightByte); // may fail, if unsupported
 
   timerFloat = new gputtTimer(4);
   timerDouble = new gputtTimer(8);
@@ -97,19 +101,39 @@ int main(int argc, char *argv[]) {
 
   // Create tester
   tester = new TensorTester();
-  tester->setTensorCheckPattern((unsigned int *)dataIn, dataSize*2);
+  tester->setTensorCheckPattern((unsigned int *)dataIn, dataSize * 2);
 
   bool passed = true;
-  if(passed){passed = test1(); if(!passed) printf("Test 1 failed\n");}
-  if(passed){passed = test2(); if(!passed) printf("Test 2 failed\n");}
-  if(passed){passed = test3(); if(!passed) printf("Test 3 failed\n");}
-  if(passed){passed = test4(); if(!passed) printf("Test 4 failed\n");}
+  if (passed) {
+    passed = test1();
+    if (!passed)
+      printf("Test 1 failed\n");
+  }
+  if (passed) {
+    passed = test2();
+    if (!passed)
+      printf("Test 2 failed\n");
+  }
+  if (passed) {
+    passed = test3();
+    if (!passed)
+      printf("Test 3 failed\n");
+  }
+  if (passed) {
+    passed = test4();
+    if (!passed)
+      printf("Test 4 failed\n");
+  }
 #ifndef __HIPCC__
   // Test is specific to warpSize=32
-  if(passed){passed = test5(); if(!passed) printf("Test 5 failed\n");}
+  if (passed) {
+    passed = test5();
+    if (!passed)
+      printf("Test 5 failed\n");
+  }
 #endif
 
-  if(passed){
+  if (passed) {
     std::vector<int> worstDim;
     std::vector<int> worstPermutation;
     double worstBW = timerDouble->getWorst(worstDim, worstPermutation);
@@ -138,20 +162,22 @@ int main(int argc, char *argv[]) {
 bool test1() {
   const int minDim = 2;
   const int maxDim = 16;
-  for (int rank = 2;rank <= 7;rank++) {
+  for (int rank = 2; rank <= 7; rank++) {
 
     std::vector<int> dim(rank);
     std::vector<int> permutation(rank);
-    for (int r=0;r < rank;r++) {
+    for (int r = 0; r < rank; r++) {
       permutation[r] = r;
-      dim[r] = minDim + r*(maxDim - minDim)/rank;
+      dim[r] = minDim + r * (maxDim - minDim) / rank;
     }
 
     do {
-      if (!test_tensor<long long int>(dim, permutation)) return false;
-      if (!test_tensor<int>(dim, permutation)) return false;
-    } while (std::next_permutation(permutation.begin(), permutation.begin() + rank));
-
+      if (!test_tensor<long long int>(dim, permutation))
+        return false;
+      if (!test_tensor<int>(dim, permutation))
+        return false;
+    } while (
+        std::next_permutation(permutation.begin(), permutation.begin() + rank));
   }
 
   return true;
@@ -164,32 +190,34 @@ bool test1() {
 bool test2() {
   double minDim = 2.0;
 
-  std::srand(unsigned (std::time(0)));
+  std::srand(unsigned(std::time(0)));
 
-  for (int rank = 2;rank <= 15;rank++) {
-    double volmin = pow(minDim+1, rank);
+  for (int rank = 2; rank <= 15; rank++) {
+    double volmin = pow(minDim + 1, rank);
     double volmax = (double)dataSize;
 
-    for (int isample=0;isample < 100;isample++) {
+    for (int isample = 0; isample < 100; isample++) {
 
       std::vector<int> dim(rank);
       std::vector<int> permutation(rank);
-      for (int r=0;r < rank;r++) permutation[r] = r;
+      for (int r = 0; r < rank; r++)
+        permutation[r] = r;
       double vol = 1.0;
       double curvol = 1.0;
       int iter = 0;
       do {
-        vol = (volmin + (volmax - volmin)*((double)rand())/((double)RAND_MAX) );
+        vol = (volmin +
+               (volmax - volmin) * ((double)rand()) / ((double)RAND_MAX));
 
         int subiter = 0;
         do {
-          for (int r=0;r < rank;r++) {
-            double vol_left = vol/(curvol*pow(minDim, (double)(rank-r)));
-            double aveDim = pow(vol, 1.0/(double)rank);
+          for (int r = 0; r < rank; r++) {
+            double vol_left = vol / (curvol * pow(minDim, (double)(rank - r)));
+            double aveDim = pow(vol, 1.0 / (double)rank);
             double dimSpread = (aveDim - minDim);
             // rn = -1 ... 1
-            double rn = 2.0*(((double)rand())/((double)RAND_MAX) - 0.5);
-            dim[r] = (int)(aveDim + dimSpread*rn);
+            double rn = 2.0 * (((double)rand()) / ((double)RAND_MAX) - 0.5);
+            dim[r] = (int)(aveDim + dimSpread * rn);
             curvol *= (double)dim[r];
           }
 
@@ -198,11 +226,11 @@ bool test2() {
           // for (int r=0;r < rank;r++) printf(" %d", dim[r]);
           // printf("\n");
 
-          double vol_scale = pow(vol/curvol, 1.0/(double)rank);
+          double vol_scale = pow(vol / curvol, 1.0 / (double)rank);
           // printf("vol_scale %lf\n", vol_scale);
           curvol = 1.0;
-          for (int r=0;r < rank;r++) {
-            dim[r] = std::max(2, (int)round((double)dim[r]*vol_scale));
+          for (int r = 0; r < rank; r++) {
+            dim[r] = std::max(2, (int)round((double)dim[r] * vol_scale));
             curvol *= dim[r];
           }
 
@@ -213,12 +241,12 @@ bool test2() {
           // return false;
 
           subiter++;
-        } while (subiter < 50 && (curvol > volmax || fabs(curvol-vol)/(double)vol > 2.3));
+        } while (subiter < 50 &&
+                 (curvol > volmax || fabs(curvol - vol) / (double)vol > 2.3));
 
-        // printf("vol %lf curvol %lf volmin %lf volmax %lf\n", vol, curvol, volmin, volmax);
-        // printf("dim");
-        // for (int r=0;r < rank;r++) printf(" %d", dim[r]);
-        // printf("\n");
+        // printf("vol %lf curvol %lf volmin %lf volmax %lf\n", vol, curvol,
+        // volmin, volmax); printf("dim"); for (int r=0;r < rank;r++) printf("
+        // %d", dim[r]); printf("\n");
 
         iter++;
         if (iter == 1000) {
@@ -226,14 +254,15 @@ bool test2() {
           printf("Unable to determine dimensions in 1000 iterations\n");
           return false;
         }
-      } while (curvol > volmax || fabs(curvol-vol)/(double)vol > 2.3);
+      } while (curvol > volmax || fabs(curvol - vol) / (double)vol > 2.3);
 
       std::random_shuffle(permutation.begin(), permutation.end());
 
-      if (!test_tensor<long long int>(dim, permutation)) return false;
-      if (!test_tensor<int>(dim, permutation)) return false;
+      if (!test_tensor<long long int>(dim, permutation))
+        return false;
+      if (!test_tensor<int>(dim, permutation))
+        return false;
     }
-
   }
 
   return true;
@@ -252,14 +281,18 @@ bool test3() {
     dim[1] = 67;
     permutation[0] = 1;
     permutation[1] = 0;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
-    dim[0] = 65536*32;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
+    dim[0] = 65536 * 32;
     dim[1] = 2;
     permutation[0] = 1;
     permutation[1] = 0;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
   }
 
   {
@@ -272,8 +305,10 @@ bool test3() {
     permutation[0] = 0;
     permutation[1] = 2;
     permutation[2] = 1;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
   }
 
   {
@@ -288,8 +323,10 @@ bool test3() {
     permutation[1] = 0;
     permutation[2] = 2;
     permutation[3] = 3;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
   }
 
   {
@@ -304,8 +341,10 @@ bool test3() {
     permutation[1] = 1;
     permutation[2] = 2;
     permutation[3] = 3;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
   }
 
   {
@@ -324,8 +363,10 @@ bool test3() {
     permutation[3] = 3;
     permutation[4] = 4;
     permutation[5] = 5;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
   }
 
   {
@@ -341,8 +382,10 @@ bool test3() {
     permutation[2] = 5 - 1;
     permutation[3] = 3 - 1;
     permutation[4] = 1 - 1;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
   }
 
   {
@@ -358,8 +401,10 @@ bool test3() {
     permutation[2] = 3;
     permutation[3] = 2;
     permutation[4] = 4;
-    if (!test_tensor<long long int>(dim, permutation)) return false;
-    if (!test_tensor<int>(dim, permutation)) return false;
+    if (!test_tensor<long long int>(dim, permutation))
+      return false;
+    if (!test_tensor<int>(dim, permutation))
+      return false;
   }
 
   return true;
@@ -376,7 +421,7 @@ bool test4() {
   const int numStream = 10;
 
   gpuStream_t streams[numStream];
-  for (int i=0;i < numStream;i++) {
+  for (int i = 0; i < numStream; i++) {
     gpuCheck(gpuStreamCreate(&streams[i]));
   }
 
@@ -384,25 +429,26 @@ bool test4() {
 
   gputtHandle plans[numStream];
 
-  for (int i=0;i < numStream;i++) {
-    gputtCheck(gputtPlan(&plans[i], dim.size(), dim.data(), permutation.data(), sizeof(double), streams[i]));
+  for (int i = 0; i < numStream; i++) {
+    gputtCheck(gputtPlan(&plans[i], dim.size(), dim.data(), permutation.data(),
+                         sizeof(double), streams[i]));
     gputtCheck(gputtExecute(plans[i], dataIn, dataOut));
   }
 
   gpuCheck(gpuDeviceSynchronize());
 
-  bool run_ok = tester->checkTranspose(dim.size(), dim.data(), permutation.data(), (long long int *)dataOut);
+  bool run_ok = tester->checkTranspose(
+      dim.size(), dim.data(), permutation.data(), (long long int *)dataOut);
 
   gpuCheck(gpuDeviceSynchronize());
 
-  for (int i=0;i < numStream;i++) {
+  for (int i = 0; i < numStream; i++) {
     gputtCheck(gputtDestroy(plans[i]));
     gpuCheck(gpuStreamDestroy(streams[i]));
   }
 
   return run_ok;
 }
-
 
 //
 // Test 5: Transaction and cache line counters
@@ -412,49 +458,51 @@ bool test5() {
   {
     // Number of elements that are loaded per memory transaction:
     // 128 bytes per transaction
-    const  int accWidth = 128/sizeof(double);
+    const int accWidth = 128 / sizeof(double);
     // L2 cache line width is 32 bytes
-    const int cacheWidth = 32/sizeof(double);
-    if (!testCounters(32, accWidth, cacheWidth)) return false;
+    const int cacheWidth = 32 / sizeof(double);
+    if (!testCounters(32, accWidth, cacheWidth))
+      return false;
   }
 
   {
     // Number of elements that are loaded per memory transaction:
     // 128 bytes per transaction
-    const  int accWidth = 128/sizeof(float);
+    const int accWidth = 128 / sizeof(float);
     // L2 cache line width is 32 bytes
-    const int cacheWidth = 32/sizeof(float);
-    if (!testCounters(32, accWidth, cacheWidth)) return false;
+    const int cacheWidth = 32 / sizeof(float);
+    if (!testCounters(32, accWidth, cacheWidth))
+      return false;
   }
 
   return true;
 }
 
-
 template <typename T>
-bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
+bool test_tensor(std::vector<int> &dim, std::vector<int> &permutation) {
 
   int rank = dim.size();
 
   int vol = 1;
-  for (int r=0;r < rank;r++) {
+  for (int r = 0; r < rank; r++) {
     vol *= dim[r];
   }
 
-  printf("Number of elements %d\n",vol);
+  printf("Number of elements %d\n", vol);
   printf("Dimensions\n");
   printVec(dim);
   printf("Permutation\n");
   printVec(permutation);
 
-  size_t volmem = vol*sizeof(T);
-  size_t datamem = dataSize*sizeof(long long int);
+  size_t volmem = vol * sizeof(T);
+  size_t datamem = dataSize * sizeof(long long int);
   if (volmem > datamem) {
-    printf("#ERROR(test_tensor): Data size exceeded: %zu %zu\n", volmem, datamem);
+    printf("#ERROR(test_tensor): Data size exceeded: %zu %zu\n", volmem,
+           datamem);
     return false;
   }
 
-  gputtTimer* timer;
+  gputtTimer *timer;
   if (sizeof(T) == 4) {
     timer = timerFloat;
   } else {
@@ -462,23 +510,26 @@ bool test_tensor(std::vector<int>& dim, std::vector<int>& permutation) {
   }
 
   gputtHandle plan;
-  gputtCheck(gputtPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
+  gputtCheck(
+      gputtPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
   set_device_array<T>((T *)dataOut, -1, vol);
   gpuCheck(gpuDeviceSynchronize());
 
-  if (vol > 1000000) timer->start(dim, permutation);
+  if (vol > 1000000)
+    timer->start(dim, permutation);
   gputtCheck(gputtExecute(plan, dataIn, dataOut));
-  if (vol > 1000000) timer->stop();
+  if (vol > 1000000)
+    timer->stop();
 
   gputtCheck(gputtDestroy(plan));
 
-  return tester->checkTranspose<T>(rank, dim.data(), permutation.data(), (T *)dataOut);
+  return tester->checkTranspose<T>(rank, dim.data(), permutation.data(),
+                                   (T *)dataOut);
 }
 
-void printVec(std::vector<int>& vec) {
-  for (int i=0;i < vec.size();i++) {
+void printVec(std::vector<int> &vec) {
+  for (int i = 0; i < vec.size(); i++) {
     printf("%d ", vec[i]);
   }
   printf("\n");
 }
-

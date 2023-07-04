@@ -22,20 +22,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
-#include <list>
-#include <unordered_map>
-#include "gputtUtils.h"
-#include "gputtplan.h"
-#include "gputtkernel.h"
-#include "gputtTimer.h"
 #include "gputt.h"
+#include "gputtTimer.h"
+#include "gputtUtils.h"
+#include "gputtkernel.h"
+#include "gputtplan.h"
 #include <atomic>
-#include <mutex>
 #include <cstdlib>
+#include <list>
+#include <mutex>
+#include <unordered_map>
 // #include <chrono>
 
 // Hash table to store the plans
-static std::unordered_map<gputtHandle, gputtPlan_t* > planStorage;
+static std::unordered_map<gputtHandle, gputtPlan_t *> planStorage;
 static std::mutex planStorageMutex;
 
 // Current handle
@@ -47,10 +47,10 @@ static std::mutex devicePropsMutex;
 
 // Checks prepares device if it's not ready yet and returns device properties
 // Also sets shared memory configuration
-void getDeviceProp(int& deviceID, gpuDeviceProp_t &prop) {
+void getDeviceProp(int &deviceID, gpuDeviceProp_t &prop) {
   gpuCheck(gpuGetDevice(&deviceID));
 
-  // need to lock this function	
+  // need to lock this function
   std::lock_guard<std::mutex> lock(devicePropsMutex);
 
   auto it = deviceProps.find(deviceID);
@@ -64,27 +64,35 @@ void getDeviceProp(int& deviceID, gpuDeviceProp_t &prop) {
   }
 }
 
-static gputtResult gputtPlanCheckInput(int rank, const int* dim, const int* permutation, size_t sizeofType) {
+static gputtResult gputtPlanCheckInput(int rank, const int *dim,
+                                       const int *permutation,
+                                       size_t sizeofType) {
   // Check sizeofType
-  if (sizeofType != 2 && sizeofType != 4 && sizeofType != 8) return GPUTT_INVALID_PARAMETER;
+  if (sizeofType != 2 && sizeofType != 4 && sizeofType != 8)
+    return GPUTT_INVALID_PARAMETER;
   // Check rank
-  if (rank <= 1) return GPUTT_INVALID_PARAMETER;
+  if (rank <= 1)
+    return GPUTT_INVALID_PARAMETER;
   // Check dim[]
   for (int i = 0; i < rank; i++) {
-    if (dim[i] <= 1) return GPUTT_INVALID_PARAMETER;
+    if (dim[i] <= 1)
+      return GPUTT_INVALID_PARAMETER;
   }
   // Check permutation
   bool permutation_fail = false;
-  int* check = new int[rank];
-  for (int i=0;i < rank;i++) check[i] = 0;
-  for (int i=0;i < rank;i++) {
-    if (permutation[i] < 0 || permutation[i] >= rank || check[permutation[i]]++) {
+  int *check = new int[rank];
+  for (int i = 0; i < rank; i++)
+    check[i] = 0;
+  for (int i = 0; i < rank; i++) {
+    if (permutation[i] < 0 || permutation[i] >= rank ||
+        check[permutation[i]]++) {
       permutation_fail = true;
       break;
     }
   }
-  delete [] check;
-  if (permutation_fail) return GPUTT_INVALID_PARAMETER;  
+  delete[] check;
+  if (permutation_fail)
+    return GPUTT_INVALID_PARAMETER;
 
   return GPUTT_SUCCESS;
 }
@@ -93,8 +101,8 @@ static gputtResult gputtPlanCheckInput(int rank, const int* dim, const int* perm
 // Returns best plan according to heuristic criteria
 // Returns plans.end() on invalid input or when nothing can be chosen
 //
-static std::list<gputtPlan_t>::const_iterator choosePlanHeuristic(
-  const std::list<gputtPlan_t>& plans) {
+static std::list<gputtPlan_t>::const_iterator
+choosePlanHeuristic(const std::list<gputtPlan_t> &plans) {
   // Choose the "largest" plan
   auto bestIt = plans.end();
   for (auto it = plans.begin(); it != plans.end(); it++) {
@@ -106,16 +114,19 @@ static std::list<gputtPlan_t>::const_iterator choosePlanHeuristic(
   return bestIt;
 }
 
-gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  gpuStream_t stream, gputtTransposeMethod method) {
+gputtResult gputtPlan(gputtHandle *handle, int rank, const int *dim,
+                      const int *permutation, size_t sizeofType,
+                      gpuStream_t stream, gputtTransposeMethod method) {
 
 #ifdef ENABLE_NVTOOLS
   gpuRangeStart("init");
 #endif
 
   // Check that input parameters are valid
-  gputtResult inpCheck = gputtPlanCheckInput(rank, dim, permutation, sizeofType);
-  if (inpCheck != GPUTT_SUCCESS) return inpCheck;
+  gputtResult inpCheck =
+      gputtPlanCheckInput(rank, dim, permutation, sizeofType);
+  if (inpCheck != GPUTT_SUCCESS)
+    return inpCheck;
 
   // Create new handle
   *handle = curHandle;
@@ -124,7 +135,8 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   // Check that the current handle is available (it better be!)
   {
     std::lock_guard<std::mutex> lock(planStorageMutex);
-    if (planStorage.count(*handle) != 0) return GPUTT_INTERNAL_ERROR;
+    if (planStorage.count(*handle) != 0)
+      return GPUTT_INTERNAL_ERROR;
   }
 
   // Prepare device
@@ -138,15 +150,15 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   reduceRanks(rank, dim, permutation, redDim, redPermutation);
 
 #ifdef ENABLE_NVTOOLS
-    gpuRangeStop();
-    gpuRangeStart("createPlans");
+  gpuRangeStop();
+  gpuRangeStart("createPlans");
 #endif
 
   // Create all supported plans for the specified problem dimensions.
   std::list<gputtPlan_t> plans;
-  if (!gputtPlan_t::createPlans(rank, dim, permutation,
-    redDim.size(), redDim.data(), redPermutation.data(), 
-    sizeofType, deviceID, prop, plans))
+  if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(),
+                                redDim.data(), redPermutation.data(),
+                                sizeofType, deviceID, prop, plans))
     return GPUTT_INTERNAL_ERROR;
 
 #if 0
@@ -163,43 +175,46 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
 #endif
 
     // Calculate the estimated number of cycles for each plan.
-    for (auto& plan : plans) {
-      if (!plan.countCycles(prop, 10)) return GPUTT_INTERNAL_ERROR;
+    for (auto &plan : plans) {
+      if (!plan.countCycles(prop, 10))
+        return GPUTT_INTERNAL_ERROR;
     }
 
     // Choose the best plan based on the number of cycles.
     auto it = choosePlanHeuristic(plans);
-    if (it == plans.end()) return GPUTT_INTERNAL_ERROR;
-    
+    if (it == plans.end())
+      return GPUTT_INTERNAL_ERROR;
+
     bestPlan = *it;
-  }
-  else {
+  } else {
     // One method could be a fit for a given problem multiple times,
     // with different parameters. Therefore, we use heuristic to select
     // the best plan out of multiple plans with the same method.
 
     // Find all plans for the chosen method.
     std::list<gputtPlan_t> plansForMethod;
-    for (auto& plan : plans) {
+    for (auto &plan : plans) {
       if (plan.tensorSplit.method == method)
         plansForMethod.emplace_back(plan);
     }
-    
+
     if (plansForMethod.size() == 0)
       return GPUTT_UNSUPPORTED_METHOD;
     else if (plansForMethod.size() == 1)
       bestPlan = plansForMethod.front();
     else {
       // Calculate the estimated number of cycles for each plan.
-      for (auto& plan : plans) {
-        if (!plan.countCycles(prop, 10)) return GPUTT_INTERNAL_ERROR;
+      for (auto &plan : plans) {
+        if (!plan.countCycles(prop, 10))
+          return GPUTT_INTERNAL_ERROR;
       }
-      
+
       // Choose the best plan based on the number of cycles.
       auto it = choosePlanHeuristic(plansForMethod);
-      if (it == plans.end()) return GPUTT_INTERNAL_ERROR;
-    
-      bestPlan = *it;      
+      if (it == plans.end())
+        return GPUTT_INTERNAL_ERROR;
+
+      bestPlan = *it;
     }
   }
 
@@ -212,8 +227,9 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   bestPlan.print();
 #endif
   // Create copy of the plan outside the list
-  gputtPlan_t* plan = new gputtPlan_t();
-  // NOTE: No deep copy needed here since device memory hasn't been allocated yet
+  gputtPlan_t *plan = new gputtPlan_t();
+  // NOTE: No deep copy needed here since device memory hasn't been allocated
+  // yet
   *plan = bestPlan;
   // Set device pointers to NULL in the old copy of the plan so
   // that they won't be deallocated later when the object is destroyed
@@ -228,7 +244,7 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   // Insert plan into storage
   {
     std::lock_guard<std::mutex> lock(planStorageMutex);
-    planStorage.insert( {*handle, plan} );
+    planStorage.insert({*handle, plan});
   }
 
 #ifdef ENABLE_NVTOOLS
@@ -238,14 +254,19 @@ gputtResult gputtPlan(gputtHandle* handle, int rank, const int* dim, const int* 
   return GPUTT_SUCCESS;
 }
 
-gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, const int* permutation, size_t sizeofType,
-  gpuStream_t stream, const void* idata, void* odata, const void* alpha, const void *beta) {
+gputtResult gputtPlanMeasure(gputtHandle *handle, int rank, const int *dim,
+                             const int *permutation, size_t sizeofType,
+                             gpuStream_t stream, const void *idata, void *odata,
+                             const void *alpha, const void *beta) {
 
   // Check that input parameters are valid
-  gputtResult inpCheck = gputtPlanCheckInput(rank, dim, permutation, sizeofType);
-  if (inpCheck != GPUTT_SUCCESS) return inpCheck;
+  gputtResult inpCheck =
+      gputtPlanCheckInput(rank, dim, permutation, sizeofType);
+  if (inpCheck != GPUTT_SUCCESS)
+    return inpCheck;
 
-  if (idata == odata) return GPUTT_INVALID_PARAMETER;
+  if (idata == odata)
+    return GPUTT_INVALID_PARAMETER;
 
   // Create new handle
   *handle = curHandle;
@@ -254,7 +275,8 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
   // Check that the current handle is available (it better be!)
   {
     std::lock_guard<std::mutex> lock(planStorageMutex);
-    if (planStorage.count(*handle) != 0) return GPUTT_INTERNAL_ERROR;
+    if (planStorage.count(*handle) != 0)
+      return GPUTT_INTERNAL_ERROR;
   }
 
   // Prepare device
@@ -277,8 +299,10 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
   // Create plans from non-reduced ranks
   // if (!createPlans(rank, dim, permutation, sizeofType, prop, plans)) return GPUTT_INTERNAL_ERROR;
 #else
-  if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(), redDim.data(), redPermutation.data(), 
-    sizeofType, deviceID, prop, plans)) return GPUTT_INTERNAL_ERROR;
+  if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(),
+                                redDim.data(), redPermutation.data(),
+                                sizeofType, deviceID, prop, plans))
+    return GPUTT_INTERNAL_ERROR;
 #endif
 
   // // Count cycles
@@ -288,14 +312,15 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
 
   // // Count the number of elements
   size_t numBytes = sizeofType;
-  for (int i=0;i < rank;i++) numBytes *= dim[i];
+  for (int i = 0; i < rank; i++)
+    numBytes *= dim[i];
 
   // Choose the plan
   double bestTime = 1.0e40;
   auto bestPlan = plans.end();
   Timer timer;
   std::vector<double> times;
-  for (auto it=plans.begin();it != plans.end();it++) {
+  for (auto it = plans.begin(); it != plans.end(); it++) {
     // Activate plan
     it->activate();
     // Clear output data to invalidate caches
@@ -303,7 +328,8 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
     gpuCheck(gpuDeviceSynchronize());
     timer.start();
     // Execute plan
-    if (!gputtKernel(*it, idata, odata, alpha, beta)) return GPUTT_INTERNAL_ERROR;
+    if (!gputtKernel(*it, idata, odata, alpha, beta))
+      return GPUTT_INTERNAL_ERROR;
     timer.stop();
     double curTime = timer.seconds();
     // it->print();
@@ -314,7 +340,8 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
       bestPlan = it;
     }
   }
-  if (bestPlan == plans.end()) return GPUTT_INTERNAL_ERROR;
+  if (bestPlan == plans.end())
+    return GPUTT_INTERNAL_ERROR;
 
   // bestPlan = plans.begin();
 
@@ -323,7 +350,7 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
   // bestPlan->print();
 
   // Create copy of the plan outside the list
-  gputtPlan_t* plan = new gputtPlan_t();
+  gputtPlan_t *plan = new gputtPlan_t();
   *plan = *bestPlan;
   // Set device pointers to NULL in the old copy of the plan so
   // that they won't be deallocated later when the object is destroyed
@@ -338,43 +365,49 @@ gputtResult gputtPlanMeasure(gputtHandle* handle, int rank, const int* dim, cons
   // Insert plan into storage
   {
     std::lock_guard<std::mutex> lock(planStorageMutex);
-    planStorage.insert( {*handle, plan} );
+    planStorage.insert({*handle, plan});
   }
 
   return GPUTT_SUCCESS;
 }
 
-void gputtDestroy_callback(gpuStream_t stream, gpuError_t status, void *userData){
-  gputtPlan_t* plan = (gputtPlan_t*) userData;
+void gputtDestroy_callback(gpuStream_t stream, gpuError_t status,
+                           void *userData) {
+  gputtPlan_t *plan = (gputtPlan_t *)userData;
   delete plan;
 }
 
 gputtResult gputtDestroy(gputtHandle handle) {
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
-  if (it == planStorage.end()) return GPUTT_INVALID_PLAN;
-  // Delete instance of gputtPlan_t	 
-  delete it->second;	  
-  // Delete entry from plan storage	  
+  if (it == planStorage.end())
+    return GPUTT_INVALID_PLAN;
+  // Delete instance of gputtPlan_t
+  delete it->second;
+  // Delete entry from plan storage
   planStorage.erase(it);
   return GPUTT_SUCCESS;
 }
 
-gputtResult gputtExecute(gputtHandle handle, const void* idata, void* odata, const void* alpha, const void* beta) {
+gputtResult gputtExecute(gputtHandle handle, const void *idata, void *odata,
+                         const void *alpha, const void *beta) {
   // prevent modification when find
   std::lock_guard<std::mutex> lock(planStorageMutex);
   auto it = planStorage.find(handle);
-  if (it == planStorage.end()) return GPUTT_INVALID_PLAN;
+  if (it == planStorage.end())
+    return GPUTT_INVALID_PLAN;
 
-  if (idata == odata) return GPUTT_INVALID_PARAMETER;
+  if (idata == odata)
+    return GPUTT_INVALID_PARAMETER;
 
-  gputtPlan_t& plan = *(it->second);
+  gputtPlan_t &plan = *(it->second);
 
   int deviceID;
   gpuCheck(gpuGetDevice(&deviceID));
-  if (deviceID != plan.deviceID) return GPUTT_INVALID_DEVICE;
+  if (deviceID != plan.deviceID)
+    return GPUTT_INVALID_DEVICE;
 
-  if (!gputtKernel(plan, idata, odata, alpha, beta)) return GPUTT_INTERNAL_ERROR;
+  if (!gputtKernel(plan, idata, odata, alpha, beta))
+    return GPUTT_INTERNAL_ERROR;
   return GPUTT_SUCCESS;
 }
-

@@ -1,8 +1,11 @@
 #ifndef INT_VECTOR_H
 #define INT_VECTOR_H
 
+#include <cstdio>
+
 // Intel: Minimum SSE2 required for vectorization.
-// SSE can't be used because it does not support integer operations. SSE defaults to scalar
+// SSE can't be used because it does not support integer operations. SSE
+// defaults to scalar
 
 #if defined(__SSE2__)
 // Intel x86
@@ -25,7 +28,7 @@ const int INT_VECTOR_LEN = 4;
 const char INT_VECTOR_TYPE[] = "SSE2";
 #endif
 
-#elif defined(__ALTIVEC__)  // #if defined(__SSE2__)
+#elif defined(__ALTIVEC__) // #if defined(__SSE2__)
 #define USE_ALTIVEC
 // IBM altivec
 #include <altivec.h>
@@ -44,7 +47,6 @@ const char INT_VECTOR_TYPE[] = "SCALAR";
 //
 class int_vector {
 private:
-
 #if defined(USE_AVX)
   __m256i x;
 #elif defined(USE_SSE)
@@ -56,9 +58,7 @@ private:
 #endif
 
 public:
-
-  inline int_vector() {
-  }
+  inline int_vector() {}
 
   inline int_vector(const int a) {
 #if defined(USE_AVX)
@@ -69,7 +69,7 @@ public:
     x = (vector signed int){a, a, a, a};
 #else
     x = a;
-#endif    
+#endif
   }
 
   inline int_vector(const int a[]) {
@@ -81,24 +81,18 @@ public:
     x = vec_ld(0, a);
 #else
     x = a[0];
-#endif    
+#endif
   }
 
 #if defined(USE_AVX)
-  inline int_vector(const __m256i ax) {
-    x = ax;
-  }
+  inline int_vector(const __m256i ax) { x = ax; }
 #elif defined(USE_SSE)
-  inline int_vector(const __m128i ax) {
-    x = ax;
-  }
+  inline int_vector(const __m128i ax) { x = ax; }
 #elif defined(USE_ALTIVEC)
-  inline int_vector(const vector signed int ax) {
-    x = ax;
-  }
+  inline int_vector(const vector signed int ax) { x = ax; }
 #endif
 
-  // 
+  //
   // Member functions
   //
 
@@ -157,12 +151,12 @@ public:
   inline int_vector operator~() {
 #if defined(USE_AVX)
     int_vector fullmask = int_vector(-1);
-    return int_vector( _mm256_andnot_si256(x, fullmask.x) );
+    return int_vector(_mm256_andnot_si256(x, fullmask.x));
 #elif defined(USE_SSE)
     int_vector fullmask = int_vector(-1);
-    return int_vector( _mm_andnot_si128(x, fullmask.x) );
+    return int_vector(_mm_andnot_si128(x, fullmask.x));
 #elif defined(USE_ALTIVEC)
-    return int_vector( ~x );
+    return int_vector(~x);
 #else
     return ~x;
 #endif
@@ -199,13 +193,13 @@ public:
   }
 
   // Copy contest to int array
-  void copy(int* a) const {
+  void copy(int *a) const {
 #if defined(USE_AVX)
     _mm256_storeu_si256((__m256i *)a, x);
 #elif defined(USE_SSE)
     _mm_storeu_si128((__m128i *)a, x);
 #elif defined(USE_ALTIVEC)
-     // void vec_stl (vector signed int, int, int *);
+    // void vec_stl (vector signed int, int, int *);
     vec_stl(x, 0, a);
 #else
     a[0] = x;
@@ -255,7 +249,7 @@ public:
 #elif defined(USE_ALTIVEC)
     return int_vector(a.x == b.x);
 #else
-    return int_vector((a.x == b.x)*(-1));
+    return int_vector((a.x == b.x) * (-1));
 #endif
   }
 
@@ -319,13 +313,11 @@ public:
   void print() {
     int vec[INT_VECTOR_LEN];
     this->copy(vec);
-    for (int i=0;i < INT_VECTOR_LEN;i++) {
+    for (int i = 0; i < INT_VECTOR_LEN; i++) {
       printf("%d ", vec[i]);
     }
   }
-
 };
-
 
 #if defined(USE_ALTIVEC)
 #undef vector

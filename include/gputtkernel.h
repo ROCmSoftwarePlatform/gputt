@@ -28,9 +28,12 @@ SOFTWARE.
 
 void gputtKernelSetSharedMemConfig();
 
-int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit& ts,
-             const int deviceID, const gpuDeviceProp_t& prop, LaunchConfig& lc);
+int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
+                                   const int deviceID,
+                                   const gpuDeviceProp_t &prop,
+                                   LaunchConfig &lc);
 
-bool gputtKernel(gputtPlan_t& plan, const void* dataIn, void* dataOut, const void* alpha, const void* beta);
+bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
+                 const void *alpha, const void *beta);
 
 #endif // GPUTTKERNEL_H

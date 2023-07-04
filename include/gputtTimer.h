@@ -26,14 +26,14 @@ SOFTWARE.
 #ifndef GPUTTTIMER_H
 #define GPUTTTIMER_H
 
-#include <vector>
 #include <chrono>
 #include <cstdlib>
-#include <unordered_map>
 #include <set>
+#include <unordered_map>
+#include <vector>
 // -------------------------------------------------
 // By default uses CUDA event timer. Comment out
-// this line if you want to use the wallclock 
+// this line if you want to use the wallclock
 #define CUDA_EVENT_TIMER
 // -------------------------------------------------
 #ifdef CUDA_EVENT_TIMER
@@ -101,27 +101,24 @@ private:
 public:
   gputtTimer(int sizeofType);
   ~gputtTimer();
-  void start(std::vector<int>& dim, std::vector<int>& permutation);
+  void start(std::vector<int> &dim, std::vector<int> &permutation);
   void stop();
   double seconds();
   double GBs();
   double GiBs();
   double getBest(int rank);
   double getWorst(int rank);
-  double getWorst(int rank, std::vector<int>& dim, std::vector<int>& permutation);
+  double getWorst(int rank, std::vector<int> &dim,
+                  std::vector<int> &permutation);
   double getMedian(int rank);
   double getAverage(int rank);
   std::vector<double> getData(int rank);
 
-  double getWorst(std::vector<int>& dim, std::vector<int>& permutation);
+  double getWorst(std::vector<int> &dim, std::vector<int> &permutation);
 
-  std::set<int>::const_iterator ranksBegin() {
-    return ranks.begin();
-  }
+  std::set<int>::const_iterator ranksBegin() { return ranks.begin(); }
 
-  std::set<int>::const_iterator ranksEnd() {
-    return ranks.end();
-  }
+  std::set<int>::const_iterator ranksEnd() { return ranks.end(); }
 };
 
 #endif // GPUTTTIMER_H

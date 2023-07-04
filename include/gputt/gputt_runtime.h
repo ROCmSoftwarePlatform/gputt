@@ -31,7 +31,8 @@
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
 #define gpuMemset hipMemset
 #define gpuMemsetAsync hipMemsetAsync
-#define gpuOccupancyMaxActiveBlocksPerMultiprocessor hipOccupancyMaxActiveBlocksPerMultiprocessor
+#define gpuOccupancyMaxActiveBlocksPerMultiprocessor                           \
+  hipOccupancyMaxActiveBlocksPerMultiprocessor
 #define gpuSetDevice hipSetDevice
 #define gpuSharedMemBankSizeEightByte hipSharedMemBankSizeEightByte
 #define gpuSharedMemBankSizeFourByte hipSharedMemBankSizeFourByte
@@ -69,7 +70,8 @@
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
 #define gpuMemset cudaMemset
 #define gpuMemsetAsync cudaMemsetAsync
-#define gpuOccupancyMaxActiveBlocksPerMultiprocessor cudaOccupancyMaxActiveBlocksPerMultiprocessor
+#define gpuOccupancyMaxActiveBlocksPerMultiprocessor                           \
+  cudaOccupancyMaxActiveBlocksPerMultiprocessor
 #define gpuSetDevice cudaSetDevice
 #define gpuSharedMemBankSizeEightByte cudaSharedMemBankSizeEightByte
 #define gpuSharedMemBankSizeFourByte cudaSharedMemBankSizeFourByte
@@ -81,4 +83,3 @@
 #endif // __HIP_PLATFORM_HCC__
 
 #endif // GPUTT_RUNTIME_H
-

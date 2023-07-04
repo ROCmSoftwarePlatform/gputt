@@ -28,25 +28,22 @@ SOFTWARE.
 #define MAX_REG_STORAGE 8
 
 // Tensor conversion constants
-struct TensorConv
-{
-	int c;
-	int d;
-	int ct;
+struct TensorConv {
+  int c;
+  int d;
+  int ct;
 };
 
 // Tensor conversion constants input & output pair
 // TODO Use nested struct TensorConv instead
-struct TensorConvInOut
-{
-	int c_in;
-	int d_in;
-	int ct_in;
+struct TensorConvInOut {
+  int c_in;
+  int d_in;
+  int ct_in;
 
-	int c_out;
-	int d_out;
-	int ct_out;
+  int c_out;
+  int d_out;
+  int ct_out;
 };
 
 #endif // GPUTT_TYPES_H
-

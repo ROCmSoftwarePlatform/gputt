@@ -31,47 +31,51 @@ SOFTWARE.
 
 //----------------------------------------------------------------------------------------
 
-void set_device_array_async_T(void *data, int value, const size_t ndata, gpuStream_t stream, const size_t sizeofT) {
-  gpuCheck(gpuMemsetAsync(data, value, sizeofT*ndata, stream));
+void set_device_array_async_T(void *data, int value, const size_t ndata,
+                              gpuStream_t stream, const size_t sizeofT) {
+  gpuCheck(gpuMemsetAsync(data, value, sizeofT * ndata, stream));
 }
 
-void set_device_array_T(void *data, int value, const size_t ndata, const size_t sizeofT) {
-  gpuCheck(gpuMemset(data, value, sizeofT*ndata));
+void set_device_array_T(void *data, int value, const size_t ndata,
+                        const size_t sizeofT) {
+  gpuCheck(gpuMemset(data, value, sizeofT * ndata));
 }
-
-
 
 //----------------------------------------------------------------------------------------
 //
 // Copies memory Host -> Device
 //
-void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len, gpuStream_t stream,
-           const size_t sizeofT) {
-  gpuCheck(gpuMemcpyAsync(d_array, h_array, sizeofT*array_len, gpuMemcpyDefault, stream));
+void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len,
+                       gpuStream_t stream, const size_t sizeofT) {
+  gpuCheck(gpuMemcpyAsync(d_array, h_array, sizeofT * array_len,
+                          gpuMemcpyDefault, stream));
 }
 
 void copy_HtoD_T(const void *h_array, void *d_array, size_t array_len,
-     const size_t sizeofT) {
-  gpuCheck(gpuMemcpy(d_array, h_array, sizeofT*array_len, gpuMemcpyDefault));
+                 const size_t sizeofT) {
+  gpuCheck(gpuMemcpy(d_array, h_array, sizeofT * array_len, gpuMemcpyDefault));
 }
 
 //----------------------------------------------------------------------------------------
 //
 // Copies memory Device -> Host
 //
-void copy_DtoH_async_T(const void *d_array, void *h_array, const size_t array_len, gpuStream_t stream,
-           const size_t sizeofT) {
-  gpuCheck(gpuMemcpyAsync(h_array, d_array, sizeofT*array_len, gpuMemcpyDefault, stream));
+void copy_DtoH_async_T(const void *d_array, void *h_array,
+                       const size_t array_len, gpuStream_t stream,
+                       const size_t sizeofT) {
+  gpuCheck(gpuMemcpyAsync(h_array, d_array, sizeofT * array_len,
+                          gpuMemcpyDefault, stream));
 }
 
-void copy_DtoH_T(const void *d_array, void *h_array, const size_t array_len, const size_t sizeofT) {
-  gpuCheck(gpuMemcpy(h_array, d_array, sizeofT*array_len, gpuMemcpyDefault));
+void copy_DtoH_T(const void *d_array, void *h_array, const size_t array_len,
+                 const size_t sizeofT) {
+  gpuCheck(gpuMemcpy(h_array, d_array, sizeofT * array_len, gpuMemcpyDefault));
 }
 
 //----------------------------------------------------------------------------------------
 #ifdef ENABLE_NVTOOLS
 void gpuRangeStart(const char *range_name) {
-  static int color_id=0;
+  static int color_id = 0;
   nvtxEventAttributes_t att;
   att.version = NVTX_VERSION;
   att.size = NVTX_EVENT_ATTRIB_STRUCT_SIZE;
@@ -86,13 +90,12 @@ void gpuRangeStart(const char *range_name) {
     att.color = 0xFFFF00FF;
   }
   color_id++;
-  if (color_id > 3) color_id = 0;
+  if (color_id > 3)
+    color_id = 0;
   att.messageType = NVTX_MESSAGE_TYPE_ASCII;
   att.message.ascii = range_name;
   nvtxRangePushEx(&att);
 }
 
-void gpuRangeStop() {
-  nvtxRangePop();
-}
+void gpuRangeStop() { nvtxRangePop(); }
 #endif

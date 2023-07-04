@@ -26,10 +26,10 @@ SOFTWARE.
 #define GPUTTPLAN_H
 
 #include "gputt.h"
+#include "gputtTypes.h"
 #include "gputt_runtime.h"
 #include <list>
 #include <vector>
-#include "gputtTypes.h"
 
 // Size of the shared memory tile used in some algorithms.
 // This parameter is associated with the warp (wavefront) size,
@@ -53,7 +53,7 @@ class TensorSplit {
 public:
   // Transposing method
   gputtTransposeMethod method;
-  
+
   // Input volume
   int sizeMm;
   int volMm;
@@ -95,7 +95,7 @@ public:
   void print();
 
   void update(const int sizeMm_in, const int sizeMk_in, const int rank,
-    const int* dim, const int* permutation);
+              const int *dim, const int *permutation);
 
   // Number of elements in shared memory space
   size_t shmem() const;
@@ -106,12 +106,11 @@ public:
   // Bytes the shared memory space that needs to be allocated
   // (can be larger than volShmem() due to padding)
   size_t shmemAlloc(int sizeofType) const;
-
 };
 
 class LaunchConfig {
 public:
- // Kernel launch configuration
+  // Kernel launch configuration
   dim3 numthread;
   dim3 numblock;
   size_t shmemsize;
@@ -120,8 +119,7 @@ public:
   int numRegStorage;
 
   void print();
-
- };
+};
 
 // Class that stores the plan data
 class gputtPlan_t {
@@ -134,7 +132,7 @@ public:
 
   // Kernel launch configuration
   LaunchConfig launchConfig;
-  
+
   // Rank of the tensor
   int rank;
 
@@ -172,58 +170,74 @@ public:
   // Device buffers
   //----------------
   // sizeMbar
-  TensorConvInOut* Mbar;
+  TensorConvInOut *Mbar;
 
   // sizeMmk
-  TensorConvInOut* Mmk;
+  TensorConvInOut *Mmk;
 
   // sizeMmk
-  TensorConv* Msh;
+  TensorConv *Msh;
 
   // For TiledSingleInRank
-  TensorConv* Mk;
+  TensorConv *Mk;
 
   // For TiledSingleOutRank
-  TensorConv* Mm;
+  TensorConv *Mm;
 
   gputtPlan_t();
   ~gputtPlan_t();
   void print();
   void setStream(gpuStream_t stream_in);
-  bool countCycles(gpuDeviceProp_t& prop, const int numPosMbarSample=0);
+  bool countCycles(gpuDeviceProp_t &prop, const int numPosMbarSample = 0);
   void activate();
   void nullDevicePointers();
 
-  static bool createPlans(const int rank, const int* dim, const int* permutation,
-    const int redRank, const int* redDim, const int* redPermutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+  static bool createPlans(const int rank, const int *dim,
+                          const int *permutation, const int redRank,
+                          const int *redDim, const int *redPermutation,
+                          const size_t sizeofType, const int deviceID,
+                          const gpuDeviceProp_t &prop,
+                          std::list<gputtPlan_t> &plans);
 
-  bool operator>(const gputtPlan_t& rhs) const;
-  bool operator<(const gputtPlan_t& rhs) const;
+  bool operator>(const gputtPlan_t &rhs) const;
+  bool operator<(const gputtPlan_t &rhs) const;
 
 private:
-  static bool createTrivialPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+  static bool createTrivialPlans(const int rank, const int *dim,
+                                 const int *permutation,
+                                 const size_t sizeofType, const int deviceID,
+                                 const gpuDeviceProp_t &prop,
+                                 std::list<gputtPlan_t> &plans);
 
-  static bool createTiledPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+  static bool createTiledPlans(const int rank, const int *dim,
+                               const int *permutation, const size_t sizeofType,
+                               const int deviceID, const gpuDeviceProp_t &prop,
+                               std::list<gputtPlan_t> &plans);
 
-  static bool createTiledCopyPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+  static bool createTiledCopyPlans(const int rank, const int *dim,
+                                   const int *permutation,
+                                   const size_t sizeofType, const int deviceID,
+                                   const gpuDeviceProp_t &prop,
+                                   std::list<gputtPlan_t> &plans);
 
-  static bool createPackedPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+  static bool createPackedPlans(const int rank, const int *dim,
+                                const int *permutation, const size_t sizeofType,
+                                const int deviceID, const gpuDeviceProp_t &prop,
+                                std::list<gputtPlan_t> &plans);
 
-  static bool createPackedSplitPlans(const int rank, const int* dim, const int* permutation,
-    const size_t sizeofType, const int deviceID, const gpuDeviceProp_t& prop, std::list<gputtPlan_t>& plans);
+  static bool createPackedSplitPlans(const int rank, const int *dim,
+                                     const int *permutation,
+                                     const size_t sizeofType,
+                                     const int deviceID,
+                                     const gpuDeviceProp_t &prop,
+                                     std::list<gputtPlan_t> &plans);
 
-  bool setup(const int rank_in, const int* dim, const int* permutation,
-    const size_t sizeofType_in, const TensorSplit& tensorSplit_in,
-    const LaunchConfig& launchConfig_in, const int numActiveBlock_in);
-
+  bool setup(const int rank_in, const int *dim, const int *permutation,
+             const size_t sizeofType_in, const TensorSplit &tensorSplit_in,
+             const LaunchConfig &launchConfig_in, const int numActiveBlock_in);
 };
 
-void reduceRanks(const int rank, const int* dim, const int* permutation,
-  std::vector<int>& redDim, std::vector<int>& redPermutation);
+void reduceRanks(const int rank, const int *dim, const int *permutation,
+                 std::vector<int> &redDim, std::vector<int> &redPermutation);
 
 #endif // GPUTTPLAN_H

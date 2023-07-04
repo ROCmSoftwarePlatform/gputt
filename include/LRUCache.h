@@ -23,20 +23,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *******************************************************************************/
 
-#include <utility>
 #include <list>
-#include <unordered_map>
 #include <mutex>
+#include <unordered_map>
+#include <utility>
 
 using namespace std;
 
 //
 // Simple LRU cache implementation
 //
-template <typename key_type, typename value_type>
-class LRUCache {
+template <typename key_type, typename value_type> class LRUCache {
 private:
-
   struct ValueIterator {
     value_type value;
     typename list<key_type>::iterator it;
@@ -55,22 +53,23 @@ private:
   // key = key
   // value = {value, pointer to linked list}
   unordered_map<key_type, ValueIterator> cache;
-  
+
   // Mutex
   std::mutex cache_lock;
 
 public:
-  
-  LRUCache(const size_t capacity, const value_type null_value) : capacity(capacity), null_value(null_value) {} 
- 
+  LRUCache(const size_t capacity, const value_type null_value)
+      : capacity(capacity), null_value(null_value) {}
+
   value_type get(key_type key) {
     std::lock_guard<std::mutex> lock(cache_lock);
     auto it = cache.find(key);
-    if (it == cache.end()) return null_value;
+    if (it == cache.end())
+      return null_value;
     touch(it);
     return it->second.value;
   }
-  
+
   void set(key_type key, value_type value) {
     std::lock_guard<std::mutex> lock(cache_lock);
     auto it = cache.find(key);
@@ -83,7 +82,7 @@ public:
       if (cache.size() == capacity) {
         key_type oldest_key = keys.back();
         keys.pop_back();
-        cache.erase( cache.find(oldest_key) );
+        cache.erase(cache.find(oldest_key));
       }
       keys.push_front(key);
       ValueIterator vi;
@@ -95,7 +94,6 @@ public:
   }
 
 private:
-
   void touch(typename unordered_map<key_type, ValueIterator>::iterator it) {
     keys.erase(it->second.it);
     keys.push_front(it->first);
