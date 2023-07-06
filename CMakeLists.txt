@@ -61,7 +61,7 @@ endif()
 set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
 find_package(hip)
 
-if (HIP_FOUND)
+if (CMAKE_HIP_COMPILER OR HIP_FOUND)
 set(CMAKE_HIP_FLAGS_DEBUG "-ggdb -fstandalone-debug -Xclang -O0 -Xclang -gcodeview" ${CMAKE_HIP_FLAGS})
 
 if (HIP_COMPAT_ENABLED)
@@ -82,16 +82,19 @@ endif()
 
 check_language(CUDA)
 
-if(CMAKE_CUDA_COMPILER AND (NOT HIP_FOUND))
+if(NOT (HIP_FOUND OR CMAKE_HIP_COMPILER))
+
+if(CMAKE_CUDA_COMPILER)
 
 enable_language(CUDA)
 
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -O0" ${CMAKE_CUDA_FLAGS})
 
-else(NOT HIP_FOUND)
+else()
 
 message(FATAL_ERROR "CUDA or HIP backend must be available, aborting")
 
+endif()
 endif()
 
 # ENABLE_NVTOOLS
