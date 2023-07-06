@@ -130,9 +130,9 @@ transposeTiled(const int numMm, const int volMbar, const int sizeMbar,
       // if (xout + j < readVol.x && yout < readVol.y) {
       if ((maskOutx & (static_cast<decltype(maskOutx)>(1) << j)) != 0) {
         if (betaIsZero)
-          dataOut[posOut] = alpha * shTile[threadIdx.x][threadIdx.y + j];
+          dataOut[posOut] = shTile[threadIdx.x][threadIdx.y + j];
         else
-          dataOut[posOut] = alpha * shTile[threadIdx.x][threadIdx.y + j] +
+          dataOut[posOut] = shTile[threadIdx.x][threadIdx.y + j] +
                             beta * dataOut[posOut];
       }
       posOut += posOutAdd;
@@ -243,9 +243,9 @@ transposePacked(const int volMmk, const int volMbar, const int sizeMmk,
       int posOut = posMbarOut + posMmkOut[j];
       if (posMmk < volMmk) {
         if (betaIsZero)
-          dataOut[posOut] = alpha * shBuffer[posSh[j]];
+          dataOut[posOut] = shBuffer[posSh[j]];
         else
-          dataOut[posOut] = alpha * shBuffer[posSh[j]] + beta * dataOut[posOut];
+          dataOut[posOut] = shBuffer[posSh[j]] + beta * dataOut[posOut];
       }
     }
   }
@@ -380,9 +380,9 @@ transposePackedSplit(const int splitDim, const int volMmkUnsplit,
       int posOut = posMbarOut + posMmkOut[j];
       if (posMmk < volMmkSplit) {
         if (betaIsZero)
-          dataOut[posOut] = alpha * shBuffer[posSh[j]];
+          dataOut[posOut] = shBuffer[posSh[j]];
         else
-          dataOut[posOut] = alpha * shBuffer[posSh[j]] + beta * dataOut[posOut];
+          dataOut[posOut] = shBuffer[posSh[j]] + beta * dataOut[posOut];
       }
     }
   }
@@ -460,9 +460,9 @@ transposeTiledCopy(const int numMm, const int volMbar, const int sizeMbar,
       // if ((x < tiledVol.x) && (y + j < tiledVol.y)) {
       if ((mask & (static_cast<decltype(mask)>(1) << j)) != 0) {
         if (betaIsZero)
-          dataOut[posOut] = alpha * val[j / TILEROWS];
+          dataOut[posOut] = val[j / TILEROWS];
         else
-          dataOut[posOut] = alpha * val[j / TILEROWS] + beta * dataOut[posOut];
+          dataOut[posOut] = val[j / TILEROWS] + beta * dataOut[posOut];
       }
       posOut += posOutAdd;
     }

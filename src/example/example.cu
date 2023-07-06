@@ -134,9 +134,7 @@ template <typename T> static void test() {
 
 int main(int argc, char *argv[]) {
   // Using integer element type to ease elements comparison.
-#if 0
   test<uint16_t>();
-#endif
   test<uint32_t>();
   test<uint64_t>();
 
