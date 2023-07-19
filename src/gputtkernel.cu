@@ -607,7 +607,7 @@ void gputtKernelSetSharedMemConfig() {
 const int CACHE_SIZE = 100000;
 const int MAX_NUMTYPE = 2;
 static int numDevices = -1;
-LRUCache<unsigned long long int, int> nabCache(CACHE_SIZE, -1);
+LRUCache<uint64_t, int> nabCache(CACHE_SIZE, -1);
 
 //
 // Returns the maximum number of active blocks per SM
@@ -693,14 +693,14 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
     }
     int key_reg = (lc.numRegStorage - 1);
     int key_type = ilog2(sizeofType(dtype));
-    unsigned long long int key =
-        (unsigned long long int)(lc.shmemsize / sizeofType(dtype)) * MAX_NUMWARP *
+    uint64_t key =
+        (uint64_t)(lc.shmemsize / sizeofType(dtype)) * MAX_NUMWARP *
             MAX_REG_STORAGE * MAX_NUMTYPE * numDevices +
-        (unsigned long long int)deviceID * MAX_NUMWARP * MAX_REG_STORAGE *
+        (uint64_t)deviceID * MAX_NUMWARP * MAX_REG_STORAGE *
             MAX_NUMTYPE +
-        (unsigned long long int)key_type * MAX_NUMWARP * MAX_REG_STORAGE +
-        (unsigned long long int)key_reg * MAX_NUMWARP +
-        (unsigned long long int)key_warp;
+        (uint64_t)key_type * MAX_NUMWARP * MAX_REG_STORAGE +
+        (uint64_t)key_reg * MAX_NUMWARP +
+        (uint64_t)key_warp;
 
     numActiveBlock = nabCache.get(key);
     if (numActiveBlock == -1) {
@@ -995,7 +995,7 @@ template<typename T>
 T get_value(const void* val, T default_val) { return val ? *reinterpret_cast<const T*>(val) : default_val; }
 
 template<typename T>
-T get_value(const void* val, T default_val, gputtDataType dtype)
+T get_value(gputtDataType dtype, const void* val, T default_val)
 {
   if (!val) return default_val;
 
@@ -1024,8 +1024,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
 
   switch (ts.method) {
   case gputtTransposeMethodTrivial :
-    if (get_value<double>(alphaPtr, plan.dtype) != 1 ||
-        get_value<double>(betaPtr, plan.dtype) != 0) {
+    if (get_value<double>(plan.dtype, alphaPtr, 1) != 1 ||
+        get_value<double>(plan.dtype, betaPtr, 0) != 0) {
       fprintf(stderr, "gpuTT ERROR: this case still has to be implemented\n");
       return false;
     }
@@ -1045,7 +1045,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   } while (0)
 
 #define CALL0(TYPE, NREG) do {                                                 \
-  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
   if (betaIsZero)                                                              \
     CALL1(TYPE, NREG, true /* betaIsZero */);                                  \
   else                                                                         \
@@ -1095,7 +1095,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   } while (0)	
 
 #define CALL0(TYPE, NREG) do {                                                 \
-  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
   if (betaIsZero)                                                              \
     CALL1(TYPE, NREG, true /* betaIsZero */);                                  \
   else                                                                         \
@@ -1145,7 +1145,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   } while (0)
 
 #define CALL0(TYPE) do {                                                       \
-  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
   if (betaIsZero)                                                              \
     CALL1(TYPE, true /* betaIsZero */);                                        \
   else                                                                         \
@@ -1188,7 +1188,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   } while (0)
 
 #define CALL0(TYPE) do {                                                       \
-  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
   if (betaIsZero)                                                              \
     CALL1(TYPE, true /* betaIsZero */);                                        \
   else                                                                         \

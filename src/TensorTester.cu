@@ -221,6 +221,6 @@ bool TensorTester::checkTranspose(int rank, int *dim, int *permutation,
 // Explicit instances
 template bool TensorTester::checkTranspose<int>(int rank, int *dim,
                                                 int *permutation, int *data);
-template bool TensorTester::checkTranspose<long long int>(int rank, int *dim,
+template bool TensorTester::checkTranspose<int64_t>(int rank, int *dim,
                                                           int *permutation,
-                                                          long long int *data);
+                                                          int64_t *data);

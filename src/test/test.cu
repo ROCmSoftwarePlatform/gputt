@@ -49,8 +49,8 @@ SOFTWARE.
 gputtTimer *timerFloat;
 gputtTimer *timerDouble;
 
-long long int *dataIn = NULL;
-long long int *dataOut = NULL;
+int64_t *dataIn = NULL;
+int64_t *dataOut = NULL;
 int dataSize = 200000000;
 TensorTester *tester = NULL;
 
@@ -96,8 +96,8 @@ int main(int argc, char *argv[]) {
   timerDouble = new gputtTimer(8);
 
   // Allocate device data, 100M elements
-  gpuCheck(gpuMalloc(&dataIn, sizeof(long long int) * dataSize));
-  gpuCheck(gpuMalloc(&dataOut, sizeof(long long int) * dataSize));
+  gpuCheck(gpuMalloc(&dataIn, sizeof(int64_t) * dataSize));
+  gpuCheck(gpuMalloc(&dataOut, sizeof(int64_t) * dataSize));
 
   // Create tester
   tester = new TensorTester();
@@ -172,7 +172,7 @@ bool test1() {
     }
 
     do {
-      if (!test_tensor<long long int>(dim, permutation))
+      if (!test_tensor<int64_t>(dim, permutation))
         return false;
       if (!test_tensor<int>(dim, permutation))
         return false;
@@ -258,7 +258,7 @@ bool test2() {
 
       std::random_shuffle(permutation.begin(), permutation.end());
 
-      if (!test_tensor<long long int>(dim, permutation))
+      if (!test_tensor<int64_t>(dim, permutation))
         return false;
       if (!test_tensor<int>(dim, permutation))
         return false;
@@ -281,7 +281,7 @@ bool test3() {
     dim[1] = 67;
     permutation[0] = 1;
     permutation[1] = 0;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -289,7 +289,7 @@ bool test3() {
     dim[1] = 2;
     permutation[0] = 1;
     permutation[1] = 0;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -305,7 +305,7 @@ bool test3() {
     permutation[0] = 0;
     permutation[1] = 2;
     permutation[2] = 1;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -323,7 +323,7 @@ bool test3() {
     permutation[1] = 0;
     permutation[2] = 2;
     permutation[3] = 3;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -341,7 +341,7 @@ bool test3() {
     permutation[1] = 1;
     permutation[2] = 2;
     permutation[3] = 3;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -363,7 +363,7 @@ bool test3() {
     permutation[3] = 3;
     permutation[4] = 4;
     permutation[5] = 5;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -382,7 +382,7 @@ bool test3() {
     permutation[2] = 5 - 1;
     permutation[3] = 3 - 1;
     permutation[4] = 1 - 1;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -401,7 +401,7 @@ bool test3() {
     permutation[2] = 3;
     permutation[3] = 2;
     permutation[4] = 4;
-    if (!test_tensor<long long int>(dim, permutation))
+    if (!test_tensor<int64_t>(dim, permutation))
       return false;
     if (!test_tensor<int>(dim, permutation))
       return false;
@@ -438,7 +438,7 @@ bool test4() {
   gpuCheck(gpuDeviceSynchronize());
 
   bool run_ok = tester->checkTranspose(
-      dim.size(), dim.data(), permutation.data(), (long long int *)dataOut);
+      dim.size(), dim.data(), permutation.data(), (int64_t *)dataOut);
 
   gpuCheck(gpuDeviceSynchronize());
 
@@ -495,7 +495,7 @@ bool test_tensor(std::vector<int> &dim, std::vector<int> &permutation) {
   printVec(permutation);
 
   size_t volmem = vol * sizeof(T);
-  size_t datamem = dataSize * sizeof(long long int);
+  size_t datamem = dataSize * sizeof(int64_t);
   if (volmem > datamem) {
     printf("#ERROR(test_tensor): Data size exceeded: %zu %zu\n", volmem,
            datamem);

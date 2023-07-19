@@ -156,14 +156,14 @@ void memcpyFloat(const int n, float *data_in, float *data_out,
 // Explicit instances
 template void scalarCopy<int>(const int n, const int *data_in, int *data_out,
                               gpuStream stream);
-template void scalarCopy<long long int>(const int n,
-                                        const long long int *data_in,
-                                        long long int *data_out,
+template void scalarCopy<int64_t>(const int n,
+                                        const int64_t *data_in,
+                                        int64_t *data_out,
                                         gpuStream stream);
 template void vectorCopy<int>(const int n, int *data_in, int *data_out,
                               gpuStream stream);
-template void vectorCopy<long long int>(const int n, long long int *data_in,
-                                        long long int *data_out,
+template void vectorCopy<int64_t>(const int n, int64_t *data_in,
+                                        int64_t *data_out,
                                         gpuStream stream);
 void memcpyFloat(const int n, float *data_in, float *data_out,
                  gpuStream stream);

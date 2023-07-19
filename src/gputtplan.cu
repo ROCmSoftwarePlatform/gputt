@@ -658,10 +658,10 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
         ts.numSplit = bestNumSplit0;
         ts.update(numMm, numMk, rank, dim, permutation);
         // Make sure splitDim*numSplit fits into an integer
-        const unsigned long long int dim_cutoff =
-            ((unsigned long long int)1 << 31);
-        unsigned long long int dim0 = (unsigned long long int)ts.splitDim *
-                                      (unsigned long long int)(ts.numSplit + 1);
+        const uint64_t dim_cutoff =
+            ((uint64_t)1 << 31);
+        uint64_t dim0 = (uint64_t)ts.splitDim *
+                                      (uint64_t)(ts.numSplit + 1);
         if (!planExists(ts, plans) && dim0 < dim_cutoff) {
           gputtPlan_t plan;
           if (!plan.setup(rank, dim, permutation, dtype, ts, lc0,
@@ -672,9 +672,9 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
         if (bestNumSplit1 != bestNumSplit0) {
           ts.numSplit = bestNumSplit1;
           ts.update(numMm, numMk, rank, dim, permutation);
-          unsigned long long int dim1 =
-              (unsigned long long int)ts.splitDim *
-              (unsigned long long int)(ts.numSplit + 1);
+          uint64_t dim1 =
+              (uint64_t)ts.splitDim *
+              (uint64_t)(ts.numSplit + 1);
           if (!planExists(ts, plans) && dim1 < dim_cutoff) {
             gputtPlan_t plan;
             if (!plan.setup(rank, dim, permutation, dtype, ts, lc1,
@@ -686,9 +686,9 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
         if (bestNumSplit2 != bestNumSplit0 && bestNumSplit2 != bestNumSplit1) {
           ts.numSplit = bestNumSplit2;
           ts.update(numMm, numMk, rank, dim, permutation);
-          unsigned long long int dim2 =
-              (unsigned long long int)ts.splitDim *
-              (unsigned long long int)(ts.numSplit + 1);
+          uint64_t dim2 =
+              (uint64_t)ts.splitDim *
+              (uint64_t)(ts.numSplit + 1);
           if (!planExists(ts, plans) && dim2 < dim_cutoff) {
             gputtPlan_t plan;
             if (!plan.setup(rank, dim, permutation, dtype, ts, lc2,

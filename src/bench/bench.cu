@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
   if (dimIn.size() > 0) {
     bool ok = (elemsize == 4)
                   ? bench_input<int>(dimIn, permutationIn)
-                  : bench_input<long long int>(dimIn, permutationIn);
+                  : bench_input<int64_t>(dimIn, permutationIn);
     if (ok)
       goto benchOK;
     goto fail;
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
   if (benchID / 100 == 5) {
     bool ok = (elemsize == 4)
                   ? bench5<int>(200 * MILLION, benchID % 100)
-                  : bench5<long long int>(200 * MILLION, benchID % 100);
+                  : bench5<int64_t>(200 * MILLION, benchID % 100);
     if (ok) {
       printf("bench5:\n");
       for (auto it = timer->ranksBegin(); it != timer->ranksEnd(); it++) {
@@ -324,7 +324,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (benchID == 7) {
-    bool ok = (elemsize == 4) ? bench7<int>() : bench7<long long int>();
+    bool ok = (elemsize == 4) ? bench7<int>() : bench7<int64_t>();
     if (ok) {
       printf("bench7:\n");
       for (auto it = timer->ranksBegin(); it != timer->ranksEnd(); it++) {
@@ -363,7 +363,7 @@ int main(int argc, char *argv[]) {
   // Otherwise, do memcopy benchmark
   {
     bool ok = (elemsize == 4) ? bench_memcpy<int>(benchID)
-                              : bench_memcpy<long long int>(benchID);
+                              : bench_memcpy<int64_t>(benchID);
     if (ok)
       goto benchOK;
     goto fail;
@@ -421,7 +421,7 @@ bool bench1(int numElem) {
       permutation[r] = ranks[i] - 1 - r;
     }
 
-    if (!bench_tensor<long long int>(dim, permutation))
+    if (!bench_tensor<int64_t>(dim, permutation))
       return false;
   }
 
@@ -449,7 +449,7 @@ bool bench2(int numElem) {
       permutation[r] = ranks[i] - 1 - r;
     }
 
-    if (!bench_tensor<long long int>(dim, permutation))
+    if (!bench_tensor<int64_t>(dim, permutation))
       return false;
   }
 
@@ -471,7 +471,7 @@ bool bench3(int numElem) {
     for (int nsample = 0; nsample < 50; nsample++) {
       std::random_shuffle(permutation.begin(), permutation.end());
       getRandomDim((double)numElem, dim);
-      if (!bench_tensor<long long int>(dim, permutation))
+      if (!bench_tensor<int64_t>(dim, permutation))
         return false;
     }
   }
@@ -692,7 +692,7 @@ bool bench6() {
       std::vector<int>{5, 4, 3, 2, 1, 0}};
 
   for (int i = 0; i < dims.size(); i++) {
-    if (!bench_tensor<long long int>(dims[i], permutations[i]))
+    if (!bench_tensor<int64_t>(dims[i], permutations[i]))
       return false;
     printf("dimensions\n");
     printVec(dims[i]);
@@ -810,7 +810,7 @@ bool bench_tensor(std::vector<int> &dim, std::vector<int> &permutation) {
   }
 
   size_t volmem = vol * sizeof(T);
-  size_t datamem = dataSize * sizeof(long long int);
+  size_t datamem = dataSize * sizeof(int64_t);
   if (volmem > datamem) {
     printf("test_tensor, data size exceeded\n");
     return false;
