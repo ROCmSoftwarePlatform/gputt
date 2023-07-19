@@ -24,7 +24,8 @@ SOFTWARE.
 *******************************************************************************/
 #ifndef TENSORTESTER_H
 #define TENSORTESTER_H
-#include "gputtTypes.h"
+
+#include "gputt_internal.h"
 
 //
 // Simple tensor transpose tester class

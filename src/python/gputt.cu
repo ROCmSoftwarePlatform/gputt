@@ -49,7 +49,7 @@ class gpuTT {
   int rank;
   const std::vector<int> dim;
   const std::vector<int> permutation;
-  gpuStream_t stream;
+  gpuStream stream;
 
 public:
   gpuTT(int rank_, const std::vector<int> &dim_,
@@ -70,7 +70,7 @@ public:
         throw std::invalid_argument(ss.str());
       }
 
-      stream = (gpuStream_t)stream_.attr("handle_int").cast<intptr_t>();
+      stream = (gpuStream)stream_.attr("handle_int").cast<intptr_t>();
     }
   }
 
@@ -106,7 +106,7 @@ public:
         throw std::invalid_argument(ss.str());
       }
 
-      stream = (gpuStream_t)stream_.attr("handle_int").cast<intptr_t>();
+      stream = (gpuStream)stream_.attr("handle_int").cast<intptr_t>();
     }
 
     if (!idata.attr("dtype").cast<pybind11::dtype>().is(

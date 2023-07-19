@@ -25,8 +25,7 @@ SOFTWARE.
 #ifndef CUDAUTILS_H
 #define CUDAUTILS_H
 
-#include "gputt_runtime.h"
-#include <cstdio>
+#include "gputt_internal.h"
 
 //
 // Error checking wrapper for CUDA
@@ -43,13 +42,13 @@ SOFTWARE.
   } while (0)
 
 void set_device_array_async_T(void *data, int value, const size_t ndata,
-                              gpuStream_t stream, const size_t sizeofT);
+                              gpuStream stream, const size_t sizeofT);
 void set_device_array_T(void *data, int value, const size_t ndata,
                         const size_t sizeofT);
 
 template <class T>
 void set_device_array(T *data, int value, const size_t ndata,
-                      gpuStream_t stream = 0) {
+                      gpuStream stream = 0) {
   set_device_array_async_T(data, value, ndata, stream, sizeof(T));
 }
 
@@ -61,11 +60,11 @@ void set_device_array_sync(T *data, int value, const size_t ndata) {
 //----------------------------------------------------------------------------------------
 
 void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len,
-                       gpuStream_t stream, const size_t sizeofT);
+                       gpuStream stream, const size_t sizeofT);
 void copy_HtoD_T(const void *h_array, void *d_array, size_t array_len,
                  const size_t sizeofT);
 void copy_DtoH_async_T(const void *d_array, void *h_array,
-                       const size_t array_len, gpuStream_t stream,
+                       const size_t array_len, gpuStream stream,
                        const size_t sizeofT);
 void copy_DtoH_T(const void *d_array, void *h_array, const size_t array_len,
                  const size_t sizeofT);
@@ -76,7 +75,7 @@ void copy_DtoH_T(const void *d_array, void *h_array, const size_t array_len,
 //
 template <class T>
 void copy_HtoD(const T *h_array, T *d_array, size_t array_len,
-               gpuStream_t stream = 0) {
+               gpuStream stream = 0) {
   copy_HtoD_async_T(h_array, d_array, array_len, stream, sizeof(T));
 }
 
@@ -95,7 +94,7 @@ void copy_HtoD_sync(const T *h_array, T *d_array, size_t array_len) {
 //
 template <class T>
 void copy_DtoH(const T *d_array, T *h_array, const size_t array_len,
-               gpuStream_t stream = 0) {
+               gpuStream stream = 0) {
   copy_DtoH_async_T(d_array, h_array, array_len, stream, sizeof(T));
 }
 //----------------------------------------------------------------------------------------

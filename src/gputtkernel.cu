@@ -34,9 +34,6 @@ SOFTWARE.
 #define __ballot_sync(mask, ...) __ballot(__VA_ARGS__)
 #define __shfl_sync(mask, ...) __shfl(__VA_ARGS__)
 #define __shfl_xor_sync(mask, ...) __shfl_xor(__VA_ARGS__)
-#include <hip/hip_fp16.h>
-#else
-#include <cuda_fp16.h>
 #endif
 
 #define clz(x) __builtin_clz(x)
@@ -130,9 +127,9 @@ transposeTiled(const int numMm, const int volMbar, const int sizeMbar,
       // if (xout + j < readVol.x && yout < readVol.y) {
       if ((maskOutx & (static_cast<decltype(maskOutx)>(1) << j)) != 0) {
         if (betaIsZero)
-          dataOut[posOut] = shTile[threadIdx.x][threadIdx.y + j];
+          dataOut[posOut] = alpha * shTile[threadIdx.x][threadIdx.y + j];
         else
-          dataOut[posOut] = shTile[threadIdx.x][threadIdx.y + j] +
+          dataOut[posOut] = alpha * shTile[threadIdx.x][threadIdx.y + j] +
                             beta * dataOut[posOut];
       }
       posOut += posOutAdd;
@@ -243,9 +240,9 @@ transposePacked(const int volMmk, const int volMbar, const int sizeMmk,
       int posOut = posMbarOut + posMmkOut[j];
       if (posMmk < volMmk) {
         if (betaIsZero)
-          dataOut[posOut] = shBuffer[posSh[j]];
+          dataOut[posOut] = alpha * shBuffer[posSh[j]];
         else
-          dataOut[posOut] = shBuffer[posSh[j]] + beta * dataOut[posOut];
+          dataOut[posOut] = alpha * shBuffer[posSh[j]] + beta * dataOut[posOut];
       }
     }
   }
@@ -380,9 +377,9 @@ transposePackedSplit(const int splitDim, const int volMmkUnsplit,
       int posOut = posMbarOut + posMmkOut[j];
       if (posMmk < volMmkSplit) {
         if (betaIsZero)
-          dataOut[posOut] = shBuffer[posSh[j]];
+          dataOut[posOut] = alpha * shBuffer[posSh[j]];
         else
-          dataOut[posOut] = shBuffer[posSh[j]] + beta * dataOut[posOut];
+          dataOut[posOut] = alpha * shBuffer[posSh[j]] + beta * dataOut[posOut];
       }
     }
   }
@@ -460,9 +457,9 @@ transposeTiledCopy(const int numMm, const int volMbar, const int sizeMbar,
       // if ((x < tiledVol.x) && (y + j < tiledVol.y)) {
       if ((mask & (static_cast<decltype(mask)>(1) << j)) != 0) {
         if (betaIsZero)
-          dataOut[posOut] = val[j / TILEROWS];
+          dataOut[posOut] = alpha * val[j / TILEROWS];
         else
-          dataOut[posOut] = val[j / TILEROWS] + beta * dataOut[posOut];
+          dataOut[posOut] = alpha * val[j / TILEROWS] + beta * dataOut[posOut];
       }
       posOut += posOutAdd;
     }
@@ -615,40 +612,74 @@ LRUCache<unsigned long long int, int> nabCache(CACHE_SIZE, -1);
 //
 // Returns the maximum number of active blocks per SM
 //
-int getNumActiveBlock(const int method, const int sizeofType,
+int getNumActiveBlock(const int method, const gputtDataType dtype,
                       const LaunchConfig &lc, const int deviceID,
                       const gpuDeviceProp_t &prop) {
 
   int numActiveBlock;
   int numthread = lc.numthread.x * lc.numthread.y * lc.numthread.z;
-  switch (method) {
-  case gputtTransposeMethodTrivial: {
+
+  switch (method)
+  {
+  case gputtTransposeMethodTrivial :
     // This value does not matter, but should be > 0
     numActiveBlock = 1;
-  } break;
+    break;
 
-  case gputtTransposeMethodPacked: {
-#define CALL0(TYPE, NREG)                                                      \
-  gpuOccupancyMaxActiveBlocksPerMultiprocessor(                                \
-      &numActiveBlock, transposePacked<TYPE, NREG, true>, numthread,           \
+#define CALL0(TYPE, NREG)                                                 \
+  gpuOccupancyMaxActiveBlocksPerMultiprocessor(                           \
+      &numActiveBlock, transposePacked<TYPE, NREG, true>, numthread,      \
       lc.shmemsize)
-#define CALL(ICASE)                                                            \
-  case ICASE:                                                                  \
-    if (sizeofType == 2)                                                       \
-      CALL0(__half, ICASE);                                                    \
-    if (sizeofType == 4)                                                       \
-      CALL0(float, ICASE);                                                     \
-    if (sizeofType == 8)                                                       \
-      CALL0(double, ICASE);                                                    \
+#define CALL(ICASE)                                                       \
+  case ICASE:                                                             \
+    switch(dtype)                                                         \
+    {                                                                     \
+    case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;            \
+    case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;            \
+    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;            \
+    case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;            \
+    case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;            \
+    case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;            \
+    case gputtDataTypeUInt32  : CALL0(uint32_t, ICASE); break;            \
+    case gputtDataTypeInt16   : CALL0( int16_t, ICASE); break;            \
+    case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;            \
+    case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;            \
+    case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;            \
+    }                                                                     \
     break
+
+  case gputtTransposeMethodPacked :
     switch (lc.numRegStorage) {
 #include "calls.h"
     }
+    break;
+
 #undef CALL
 #undef CALL0
-  } break;
 
-  case gputtTransposeMethodPackedSplit: {
+#define CALL0(TYPE, NREG)                                                 \
+  gpuOccupancyMaxActiveBlocksPerMultiprocessor(                           \
+      &numActiveBlock, transposePackedSplit<TYPE, NREG, true>, numthread, \
+      lc.shmemsize)
+#define CALL(ICASE)                                                       \
+  case ICASE:                                                             \
+    switch(dtype)                                                         \
+    {                                                                     \
+    case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;            \
+    case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;            \
+    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;            \
+    case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;            \
+    case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;            \
+    case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;            \
+    case gputtDataTypeUInt32  : CALL0(uint32_t, ICASE); break;            \
+    case gputtDataTypeInt16   : CALL0( int16_t, ICASE); break;            \
+    case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;            \
+    case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;            \
+    case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;            \
+    }                                                                     \
+    break
+
+  case gputtTransposeMethodPackedSplit : {
     // Allocate cache structure if needed
     if (numDevices == -1) {
       gpuCheck(gpuGetDeviceCount(&numDevices));
@@ -661,9 +692,9 @@ int getNumActiveBlock(const int method, const int sizeofType,
       exit(1);
     }
     int key_reg = (lc.numRegStorage - 1);
-    int key_type = ilog2(sizeofType);
+    int key_type = ilog2(sizeofType(dtype));
     unsigned long long int key =
-        (unsigned long long int)(lc.shmemsize / sizeofType) * MAX_NUMWARP *
+        (unsigned long long int)(lc.shmemsize / sizeofType(dtype)) * MAX_NUMWARP *
             MAX_REG_STORAGE * MAX_NUMTYPE * numDevices +
         (unsigned long long int)deviceID * MAX_NUMWARP * MAX_REG_STORAGE *
             MAX_NUMTYPE +
@@ -674,68 +705,73 @@ int getNumActiveBlock(const int method, const int sizeofType,
     numActiveBlock = nabCache.get(key);
     if (numActiveBlock == -1) {
       // key not found in cache, determine value and add it to cache
-#define CALL0(TYPE, NREG)                                                      \
-  gpuOccupancyMaxActiveBlocksPerMultiprocessor(                                \
-      &numActiveBlock, transposePackedSplit<TYPE, NREG, true>, numthread,      \
-      lc.shmemsize)
-#define CALL(ICASE)                                                            \
-  case ICASE:                                                                  \
-    if (sizeofType == 2)                                                       \
-      CALL0(__half, ICASE);                                                    \
-    if (sizeofType == 4)                                                       \
-      CALL0(float, ICASE);                                                     \
-    if (sizeofType == 8)                                                       \
-      CALL0(double, ICASE);                                                    \
-    break
       switch (lc.numRegStorage) {
 #include "calls.h"
       }
-#undef CALL
-#undef CALL0
       nabCache.set(key, numActiveBlock);
     }
+
   } break;
 
-  case gputtTransposeMethodTiled: {
-    switch (sizeofType) {
-    case 2:
-      gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
-                                                   transposeTiled<__half, true>,
-                                                   numthread, lc.shmemsize);
-      break;
-    case 4:
-      gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
-                                                   transposeTiled<float, true>,
-                                                   numthread, lc.shmemsize);
-      break;
-    case 8:
-      gpuOccupancyMaxActiveBlocksPerMultiprocessor(&numActiveBlock,
-                                                   transposeTiled<double, true>,
-                                                   numthread, lc.shmemsize);
-      break;
-    }
-  } break;
+#undef CALL
+#undef CALL0
 
-  case gputtTransposeMethodTiledCopy: {
-    switch (sizeofType) {
-    case 2:
-      gpuOccupancyMaxActiveBlocksPerMultiprocessor(
-          &numActiveBlock, transposeTiledCopy<__half, true>, numthread,
-          lc.shmemsize);
-      break;
-    case 4:
-      gpuOccupancyMaxActiveBlocksPerMultiprocessor(
-          &numActiveBlock, transposeTiledCopy<float, true>, numthread,
-          lc.shmemsize);
-      break;
-    case 8:
-      gpuOccupancyMaxActiveBlocksPerMultiprocessor(
-          &numActiveBlock, transposeTiledCopy<double, true>, numthread,
-          lc.shmemsize);
-      break;
-    }
-  } break;
+#define CALL0(TYPE, NREG)                                                 \
+  gpuOccupancyMaxActiveBlocksPerMultiprocessor(                           \
+      &numActiveBlock, transposeTiled<TYPE, true>, numthread,             \
+      lc.shmemsize)
+#define CALL()                                                            \
+  switch(dtype)                                                           \
+  {                                                                       \
+  case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;              \
+  case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;              \
+  case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;              \
+  case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;              \
+  case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;              \
+  case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;              \
+  case gputtDataTypeUInt32  : CALL0(uint32_t, ICASE); break;              \
+  case gputtDataTypeInt16   : CALL0( int16_t, ICASE); break;              \
+  case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;              \
+  case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;              \
+  case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;              \
+  }                                                                       \
+  break
+
+  case gputtTransposeMethodTiled :
+    CALL();
+    break;
+
+#undef CALL
+#undef CALL0
+
+#define CALL0(TYPE, NREG)                                                 \
+  gpuOccupancyMaxActiveBlocksPerMultiprocessor(                           \
+      &numActiveBlock, transposeTiledCopy<TYPE, true>, numthread,         \
+      lc.shmemsize)
+#define CALL()                                                            \
+  switch(dtype)                                                           \
+  {                                                                       \
+  case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;              \
+  case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;              \
+  case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;              \
+  case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;              \
+  case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;              \
+  case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;              \
+  case gputtDataTypeUInt32  : CALL0(uint32_t, ICASE); break;              \
+  case gputtDataTypeInt16   : CALL0( int16_t, ICASE); break;              \
+  case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;              \
+  case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;              \
+  case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;              \
+  }                                                                       \
+  break
+
+  case gputtTransposeMethodTiledCopy :
+    CALL();
+    break;
   }
+
+#undef CALL
+#undef CALL0
 
   return numActiveBlock;
 }
@@ -752,7 +788,7 @@ int getNumActiveBlock(const int method, const int sizeofType,
 // lc.shmemsize
 // lc.numRegStorage  (for Packed method)
 //
-int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
+int gputtKernelLaunchConfiguration(const gputtDataType dtype, const TensorSplit &ts,
                                    const int deviceID,
                                    const gpuDeviceProp_t &prop,
                                    LaunchConfig &lc) {
@@ -777,7 +813,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
 
   case gputtTransposeMethodPacked: {
     // Amount of shared memory required
-    lc.shmemsize = ts.shmemAlloc(sizeofType); // ts.volMmk*sizeofType;
+    lc.shmemsize = ts.shmemAlloc(dtype); // ts.volMmk*sizeofType;
 
     // Check that we're not using too much shared memory per block
     if (lc.shmemsize > prop.sharedMemPerBlock) {
@@ -820,7 +856,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
           prop.warpSize;
 
       int numActiveBlock =
-          getNumActiveBlock(ts.method, sizeofType, lc, deviceID, prop);
+          getNumActiveBlock(ts.method, dtype, lc, deviceID, prop);
       // int val = numActiveBlock*lc.numthread.x;
       int val = ts.volMmkUsed() * numActiveBlock;
       if (val > bestVal) {
@@ -842,7 +878,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
 
   case gputtTransposeMethodPackedSplit: {
     // Amount of shared memory required
-    lc.shmemsize = ts.shmemAlloc(sizeofType);
+    lc.shmemsize = ts.shmemAlloc(dtype);
 
     // Check that we're not using too much shared memory per block
     if (lc.shmemsize > prop.sharedMemPerBlock) {
@@ -890,7 +926,7 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
           prop.warpSize;
 
       int numActiveBlock =
-          getNumActiveBlock(ts.method, sizeofType, lc, deviceID, prop);
+          getNumActiveBlock(ts.method, dtype, lc, deviceID, prop);
       // int val = numActiveBlock*lc.numthread.x*lc.numRegStorage;
       int val = ts.volMmkUsed() * numActiveBlock;
       if (val > bestVal) {
@@ -950,9 +986,34 @@ int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
   if (numActiveBlockReturn == -1) {
     // Not set, get it
     numActiveBlockReturn =
-        getNumActiveBlock(ts.method, sizeofType, lc, deviceID, prop);
+        getNumActiveBlock(ts.method, dtype, lc, deviceID, prop);
   }
   return numActiveBlockReturn;
+}
+
+template<typename T>
+T get_value(const void* val, T default_val) { return val ? *reinterpret_cast<const T*>(val) : default_val; }
+
+template<typename T>
+T get_value(const void* val, T default_val, gputtDataType dtype)
+{
+  if (!val) return default_val;
+
+  switch (dtype)
+  {
+  case gputtDataTypeFloat64 : return static_cast<T>(*reinterpret_cast<const   double*>(val));
+  case gputtDataTypeFloat32 : return static_cast<T>(*reinterpret_cast<const    float*>(val));
+  case gputtDataTypeFloat16 : return static_cast<T>(*reinterpret_cast<const   __half*>(val));
+  case gputtDataTypeInt64   : return static_cast<T>(*reinterpret_cast<const  int64_t*>(val));
+  case gputtDataTypeUInt64  : return static_cast<T>(*reinterpret_cast<const uint64_t*>(val));
+  case gputtDataTypeInt32   : return static_cast<T>(*reinterpret_cast<const  int32_t*>(val));
+  case gputtDataTypeUInt32  : return static_cast<T>(*reinterpret_cast<const uint32_t*>(val));
+  case gputtDataTypeInt16   : return static_cast<T>(*reinterpret_cast<const  int16_t*>(val));
+  case gputtDataTypeUInt16  : return static_cast<T>(*reinterpret_cast<const uint16_t*>(val));
+  case gputtDataTypeInt8    : return static_cast<T>(*reinterpret_cast<const   int8_t*>(val));
+  case gputtDataTypeUInt8   : return static_cast<T>(*reinterpret_cast<const  uint8_t*>(val));
+  }
+  return T{};
 }
 
 bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
@@ -961,184 +1022,204 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   LaunchConfig &lc = plan.launchConfig;
   TensorSplit &ts = plan.tensorSplit;
 
-  double alpha = 1;
-  double beta = 0;
-  if (alphaPtr) {
-    switch (plan.sizeofType) {
-    case 2:
-      alpha = *((__half *)alphaPtr);
-      break;
-    case 4:
-      alpha = *((float *)alphaPtr);
-      break;
-    case 8:
-      alpha = *((double *)alphaPtr);
-      break;
-    }
-  }
-  if (betaPtr) {
-    switch (plan.sizeofType) {
-    case 2:
-      beta = *((__half *)betaPtr);
-      break;
-    case 4:
-      beta = *((float *)betaPtr);
-      break;
-    case 8:
-      beta = *((double *)betaPtr);
-      break;
-    }
-  }
-
   switch (ts.method) {
-  case gputtTransposeMethodTrivial: {
-    if (alpha != 1 || beta != 0) {
-      printf("gpuTT ERROR: this case still has to be implemented\n");
+  case gputtTransposeMethodTrivial :
+    if (get_value<double>(alphaPtr, plan.dtype) != 1 ||
+        get_value<double>(betaPtr, plan.dtype) != 0) {
+      fprintf(stderr, "gpuTT ERROR: this case still has to be implemented\n");
       return false;
     }
     gpuCheck(gpuMemcpyAsync(dataOut, dataIn,
-                            ts.volMmk * ts.volMbar * plan.sizeofType,
+                            ts.volMmk * ts.volMbar * sizeofType(plan.dtype),
                             gpuMemcpyDefault, plan.stream));
-  } break;
+    break;
 
-  case gputtTransposeMethodPacked: {
-    switch (lc.numRegStorage) {
-#define CALL0(TYPE, NREG, betaIsZero)                                          \
+#define CALL1(TYPE, NREG, betaIsZero) do {                                     \
   transposePacked<TYPE, NREG, betaIsZero>                                      \
       <<<lc.numblock, lc.numthread, lc.shmemsize, plan.stream>>>(              \
-          ts.volMmk, ts.volMbar, ts.sizeMmk, ts.sizeMbar, plan.Mmk, plan.Mbar, \
-          plan.Msh, (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
+          ts.volMmk, ts.volMbar, ts.sizeMmk, ts.sizeMbar,                      \
+          plan.Mmk, plan.Mbar, plan.Msh,                                       \
+          reinterpret_cast<const TYPE*>(dataIn),                               \
+          reinterpret_cast<TYPE*>(dataOut),                                    \
+          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+  } while (0)
+
+#define CALL0(TYPE, NREG) do {                                                 \
+  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  if (betaIsZero)                                                              \
+    CALL1(TYPE, NREG, true /* betaIsZero */);                                  \
+  else                                                                         \
+    CALL1(TYPE, NREG, false /* betaIsZero */);                                 \
+  } while (0)                                                                  \
+
 #define CALL(ICASE)                                                            \
   case ICASE:                                                                  \
-    if (plan.sizeofType == 2) {                                                \
-      if (beta == 0) {                                                         \
-        CALL0(__half, ICASE, true);                                            \
-      } else {                                                                 \
-        CALL0(__half, ICASE, false);                                           \
-      }                                                                        \
-    } else if (plan.sizeofType == 4) {                                         \
-      if (beta == 0) {                                                         \
-        CALL0(float, ICASE, true);                                             \
-      } else {                                                                 \
-        CALL0(float, ICASE, false);                                            \
-      }                                                                        \
-    } else if (plan.sizeofType == 8) {                                         \
-      if (beta == 0) {                                                         \
-        CALL0(double, ICASE, true);                                            \
-      } else {                                                                 \
-        CALL0(double, ICASE, false);                                           \
-      }                                                                        \
+    switch(plan.dtype)                                                         \
+    {                                                                          \
+    case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;                 \
+    case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;                 \
+    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;                 \
+    case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;                 \
+    case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;                 \
+    case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;                 \
+    case gputtDataTypeUInt32  : CALL0(uint32_t, ICASE); break;                 \
+    case gputtDataTypeInt16   : CALL0( int16_t, ICASE); break;                 \
+    case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;                 \
+    case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;                 \
+    case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;                 \
     }                                                                          \
     break
+
+  case gputtTransposeMethodPacked :
+    switch (lc.numRegStorage) {
 #include "calls.h"
     default:
       printf("gputtKernel no template implemented for numRegStorage %d\n",
              lc.numRegStorage);
       return false;
+    }
+    break;
+
 #undef CALL
 #undef CALL0
-    }
+#undef CALL1
 
-  } break;
-
-  case gputtTransposeMethodPackedSplit: {
-    switch (lc.numRegStorage) {
-#define CALL0(TYPE, NREG, betaIsZero)                                          \
+#define CALL1(TYPE, NREG, betaIsZero) do {                                     \
   transposePackedSplit<TYPE, NREG, betaIsZero>                                 \
       <<<lc.numblock, lc.numthread, lc.shmemsize, plan.stream>>>(              \
           ts.splitDim, ts.volMmkUnsplit, ts.volMbar, ts.sizeMmk, ts.sizeMbar,  \
           plan.cuDimMm, plan.cuDimMk, plan.Mmk, plan.Mbar, plan.Msh,           \
-          (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
+          reinterpret_cast<const TYPE*>(dataIn),                               \
+          reinterpret_cast<TYPE*>(dataOut),                                    \
+          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+  } while (0)	
+
+#define CALL0(TYPE, NREG) do {                                                 \
+  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  if (betaIsZero)                                                              \
+    CALL1(TYPE, NREG, true /* betaIsZero */);                                  \
+  else                                                                         \
+    CALL1(TYPE, NREG, false /* betaIsZero */);                                 \
+  } while (0)
+
 #define CALL(ICASE)                                                            \
   case ICASE:                                                                  \
-    if (plan.sizeofType == 2) {                                                \
-      if (beta == 0) {                                                         \
-        CALL0(__half, ICASE, true);                                            \
-      } else {                                                                 \
-        CALL0(__half, ICASE, false);                                           \
-      }                                                                        \
-    } else if (plan.sizeofType == 4) {                                         \
-      if (beta == 0) {                                                         \
-        CALL0(float, ICASE, true);                                             \
-      } else {                                                                 \
-        CALL0(float, ICASE, false);                                            \
-      }                                                                        \
-    } else if (plan.sizeofType == 8) {                                         \
-      if (beta == 0) {                                                         \
-        CALL0(double, ICASE, true);                                            \
-      } else {                                                                 \
-        CALL0(double, ICASE, false);                                           \
-      }                                                                        \
+    switch(plan.dtype)                                                         \
+    {                                                                          \
+    case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;                 \
+    case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;                 \
+    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;                 \
+    case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;                 \
+    case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;                 \
+    case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;                 \
+    case gputtDataTypeUInt32  : CALL0(uint32_t, ICASE); break;                 \
+    case gputtDataTypeInt16   : CALL0( int16_t, ICASE); break;                 \
+    case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;                 \
+    case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;                 \
+    case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;                 \
     }                                                                          \
     break
+
+  case gputtTransposeMethodPackedSplit :
+    switch (lc.numRegStorage) {
 #include "calls.h"
     default:
       printf("gputtKernel no template implemented for numRegStorage %d\n",
              lc.numRegStorage);
       return false;
+    }
+    break;
+
 #undef CALL
 #undef CALL0
-    }
+#undef CALL1
 
-  } break;
-
-  case gputtTransposeMethodTiled: {
-#define CALL(TYPE, betaIsZero)                                                 \
+#define CALL1(TYPE, betaIsZero) do {                                           \
   transposeTiled<TYPE, betaIsZero>                                             \
       <<<lc.numblock, lc.numthread, 0, plan.stream>>>(                         \
           ((ts.volMm - 1) / TILEDIM + 1), ts.volMbar, ts.sizeMbar,             \
           plan.tiledVol, plan.cuDimMk, plan.cuDimMm, plan.Mbar,                \
-          (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
-    if (plan.sizeofType == 2) {
-      if (beta == 0) {
-        CALL(__half, true);
-      } else {
-        CALL(__half, false);
-      }
-    } else if (plan.sizeofType == 4) {
-      if (beta == 0) {
-        CALL(float, true);
-      } else {
-        CALL(float, false);
-      }
-    } else if (plan.sizeofType == 8) {
-      if (beta == 0) {
-        CALL(double, true);
-      } else {
-        CALL(double, false);
-      }
-    }
-#undef CALL
-  } break;
+          reinterpret_cast<const TYPE*>(dataIn),                               \
+          reinterpret_cast<TYPE*>(dataOut),                                    \
+          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+  } while (0)
 
-  case gputtTransposeMethodTiledCopy: {
-#define CALL(TYPE, betaIsZero)                                                 \
+#define CALL0(TYPE) do {                                                       \
+  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  if (betaIsZero)                                                              \
+    CALL1(TYPE, true /* betaIsZero */);                                        \
+  else                                                                         \
+    CALL1(TYPE, false /* betaIsZero */);                                       \
+  } while (0)
+
+#define CALL()                                                                 \
+    switch(plan.dtype)                                                         \
+    {                                                                          \
+    case gputtDataTypeFloat64 : CALL0(  double); break;                        \
+    case gputtDataTypeFloat32 : CALL0(   float); break;                        \
+    case gputtDataTypeFloat16 : CALL0(  __half); break;                        \
+    case gputtDataTypeInt64   : CALL0( int64_t); break;                        \
+    case gputtDataTypeUInt64  : CALL0(uint64_t); break;                        \
+    case gputtDataTypeInt32   : CALL0( int32_t); break;                        \
+    case gputtDataTypeUInt32  : CALL0(uint32_t); break;                        \
+    case gputtDataTypeInt16   : CALL0( int16_t); break;                        \
+    case gputtDataTypeUInt16  : CALL0(uint16_t); break;                        \
+    case gputtDataTypeInt8    : CALL0(  int8_t); break;                        \
+    case gputtDataTypeUInt8   : CALL0( uint8_t); break;                        \
+    }                                                                          \
+    break
+
+  case gputtTransposeMethodTiled :
+    CALL();
+    break;
+
+#undef CALL
+#undef CALL0
+#undef CALL1
+
+#define CALL1(TYPE, betaIsZero) do {                                           \
   transposeTiledCopy<TYPE, betaIsZero>                                         \
       <<<lc.numblock, lc.numthread, 0, plan.stream>>>(                         \
           ((ts.volMm - 1) / TILEDIM + 1), ts.volMbar, ts.sizeMbar,             \
           plan.cuDimMk, plan.cuDimMm, plan.tiledVol, plan.Mbar,                \
-          (TYPE *)dataIn, (TYPE *)dataOut, alpha, beta)
-    if (plan.sizeofType == 2) {
-      if (beta == 0) {
-        CALL(__half, true);
-      } else {
-        CALL(__half, false);
-      }
-    } else if (plan.sizeofType == 4) {
-      if (beta == 0) {
-        CALL(float, true);
-      } else {
-        CALL(float, false);
-      }
-    } else if (plan.sizeofType == 8) {
-      if (beta == 0) {
-        CALL(double, true);
-      } else {
-        CALL(double, false);
-      }
-    }
+          reinterpret_cast<const TYPE*>(dataIn),                               \
+          reinterpret_cast<TYPE*>(dataOut),                                    \
+          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+  } while (0)
+
+#define CALL0(TYPE) do {                                                       \
+  auto betaIsZero = get_value<double>(betaPtr, 0, plan.dtype) == 0;            \
+  if (betaIsZero)                                                              \
+    CALL1(TYPE, true /* betaIsZero */);                                        \
+  else                                                                         \
+    CALL1(TYPE, false /* betaIsZero */);                                       \
+  } while (0)
+
+#define CALL()                                                                 \
+    switch(plan.dtype)                                                         \
+    {                                                                          \
+    case gputtDataTypeFloat64 : CALL0(  double); break;                        \
+    case gputtDataTypeFloat32 : CALL0(   float); break;                        \
+    case gputtDataTypeFloat16 : CALL0(  __half); break;                        \
+    case gputtDataTypeInt64   : CALL0( int64_t); break;                        \
+    case gputtDataTypeUInt64  : CALL0(uint64_t); break;                        \
+    case gputtDataTypeInt32   : CALL0( int32_t); break;                        \
+    case gputtDataTypeUInt32  : CALL0(uint32_t); break;                        \
+    case gputtDataTypeInt16   : CALL0( int16_t); break;                        \
+    case gputtDataTypeUInt16  : CALL0(uint16_t); break;                        \
+    case gputtDataTypeInt8    : CALL0(  int8_t); break;                        \
+    case gputtDataTypeUInt8   : CALL0( uint8_t); break;                        \
+    }                                                                          \
+    break
+
+  case gputtTransposeMethodTiledCopy :
+    CALL();
+    break;
+
 #undef CALL
-  } break;
+#undef CALL0
+#undef CALL1
+
   }
 
   gpuCheck(gpuGetLastError());

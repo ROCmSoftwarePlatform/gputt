@@ -25,8 +25,6 @@ SOFTWARE.
 #ifndef GPUTT_H
 #define GPUTT_H
 
-#include "gputt_runtime.h" // gpuStream_t
-
 #ifdef _WIN32
 #ifdef gputt_EXPORTS
 #define GPUTT_API __declspec(dllexport)
@@ -38,7 +36,10 @@ SOFTWARE.
 #endif // _WIN32
 
 // Handle type that is used to store and access gputt plans
-typedef unsigned int gputtHandle;
+typedef struct gputtHandle_t* gputtHandle;
+
+// Execution stream.
+typedef void* gputtStream;
 
 // Return value
 typedef enum GPUTT_API gputtResult_t {
@@ -64,6 +65,26 @@ typedef enum GPUTT_API gputtTransposeMethod_t {
   NumTransposeMethods
 } gputtTransposeMethod;
 
+// gpuTT's type system is generic, and does not make assumptions
+// about the actual types supported in hardware.
+// Internally, gpuTT maps the generic types onto hardware types,
+// for example Float16 is mapped to __half for NVIDIA/AMD GPUs.
+// We encode the type size in bytes into enum values.
+typedef enum GPUTT_API gputtDataType_t {
+  gputtDataTypeUnknown = 0,
+  gputtDataTypeFloat64 = (sizeof(  double)     | (1 << 8)),
+  gputtDataTypeFloat32 = (sizeof(   float)     | (1 << 8)),
+  gputtDataTypeFloat16 = (sizeof(   float) / 2 | (1 << 8)),
+  gputtDataTypeInt64   = (sizeof( int64_t)     | (2 << 8)),
+  gputtDataTypeUInt64  = (sizeof(uint64_t)     | (3 << 8)),
+  gputtDataTypeInt32   = (sizeof( int32_t)     | (2 << 8)),
+  gputtDataTypeUInt32  = (sizeof(uint32_t)     | (3 << 8)),
+  gputtDataTypeInt16   = (sizeof( int16_t)     | (2 << 8)),
+  gputtDataTypeUInt16  = (sizeof(uint16_t)     | (3 << 8)),
+  gputtDataTypeInt8    = (sizeof(  int8_t)     | (1 << 8)),
+  gputtDataTypeUInt8   = (sizeof( uint8_t)     | (2 << 8))
+} gputtDataType;
+
 //
 // Create plan
 //
@@ -83,7 +104,7 @@ typedef enum GPUTT_API gputtTransposeMethod_t {
 //
 gputtResult GPUTT_API
 gputtPlan(gputtHandle *handle, int rank, const int *dim, const int *permutation,
-          size_t sizeofType, gpuStream_t stream,
+          gputtDataType dtype, gputtStream stream,
           gputtTransposeMethod method = gputtTransposeMethodUnknown);
 
 //
@@ -94,7 +115,7 @@ gputtPlan(gputtHandle *handle, int rank, const int *dim, const int *permutation,
 // rank              = Rank of the tensor
 // dim[rank]         = Dimensions of the tensor
 // permutation[rank] = Transpose permutation
-// sizeofType        = Size of the elements of the tensor in bytes (=4 or 8)
+// sizeofType        = Type of the tensor elements
 // stream            = CUDA stream (0 if no stream is used)
 // idata             = Input data size product(dim)
 // odata             = Output data size product(dim)
@@ -104,7 +125,7 @@ gputtPlan(gputtHandle *handle, int rank, const int *dim, const int *permutation,
 //
 gputtResult GPUTT_API gputtPlanMeasure(gputtHandle *handle, int rank,
                                        const int *dim, const int *permutation,
-                                       size_t sizeofType, gpuStream_t stream,
+                                       gputtDataType dtype, gputtStream stream,
                                        const void *idata, void *odata,
                                        const void *alpha = NULL,
                                        const void *beta = NULL);

@@ -32,7 +32,7 @@ SOFTWARE.
 //----------------------------------------------------------------------------------------
 
 void set_device_array_async_T(void *data, int value, const size_t ndata,
-                              gpuStream_t stream, const size_t sizeofT) {
+                              gpuStream stream, const size_t sizeofT) {
   gpuCheck(gpuMemsetAsync(data, value, sizeofT * ndata, stream));
 }
 
@@ -46,7 +46,7 @@ void set_device_array_T(void *data, int value, const size_t ndata,
 // Copies memory Host -> Device
 //
 void copy_HtoD_async_T(const void *h_array, void *d_array, size_t array_len,
-                       gpuStream_t stream, const size_t sizeofT) {
+                       gpuStream stream, const size_t sizeofT) {
   gpuCheck(gpuMemcpyAsync(d_array, h_array, sizeofT * array_len,
                           gpuMemcpyDefault, stream));
 }
@@ -61,7 +61,7 @@ void copy_HtoD_T(const void *h_array, void *d_array, size_t array_len,
 // Copies memory Device -> Host
 //
 void copy_DtoH_async_T(const void *d_array, void *h_array,
-                       const size_t array_len, gpuStream_t stream,
+                       const size_t array_len, gpuStream stream,
                        const size_t sizeofT) {
   gpuCheck(gpuMemcpyAsync(h_array, d_array, sizeofT * array_len,
                           gpuMemcpyDefault, stream));

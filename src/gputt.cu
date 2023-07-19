@@ -39,7 +39,7 @@ static std::unordered_map<gputtHandle, gputtPlan_t *> planStorage;
 static std::mutex planStorageMutex;
 
 // Current handle
-static std::atomic<gputtHandle> curHandle(0);
+static std::atomic<unsigned int> curHandle(0);
 
 // Table of devices that have been initialized
 static std::unordered_map<int, gpuDeviceProp_t> deviceProps;
@@ -66,10 +66,7 @@ void getDeviceProp(int &deviceID, gpuDeviceProp_t &prop) {
 
 static gputtResult gputtPlanCheckInput(int rank, const int *dim,
                                        const int *permutation,
-                                       size_t sizeofType) {
-  // Check sizeofType
-  if (sizeofType != 2 && sizeofType != 4 && sizeofType != 8)
-    return GPUTT_INVALID_PARAMETER;
+                                       gputtDataType dtype) {
   // Check rank
   if (rank <= 1)
     return GPUTT_INVALID_PARAMETER;
@@ -115,8 +112,12 @@ choosePlanHeuristic(const std::list<gputtPlan_t> &plans) {
 }
 
 gputtResult gputtPlan(gputtHandle *handle, int rank, const int *dim,
-                      const int *permutation, size_t sizeofType,
-                      gpuStream_t stream, gputtTransposeMethod method) {
+                      const int *permutation, gputtDataType dtype,
+                      gputtStream stream_, gputtTransposeMethod method) {
+
+  if (!handle) return GPUTT_INVALID_PARAMETER;
+
+  auto stream = reinterpret_cast<gpuStream>(stream_);
 
 #ifdef ENABLE_NVTOOLS
   gpuRangeStart("init");
@@ -124,13 +125,12 @@ gputtResult gputtPlan(gputtHandle *handle, int rank, const int *dim,
 
   // Check that input parameters are valid
   gputtResult inpCheck =
-      gputtPlanCheckInput(rank, dim, permutation, sizeofType);
+      gputtPlanCheckInput(rank, dim, permutation, dtype);
   if (inpCheck != GPUTT_SUCCESS)
     return inpCheck;
 
   // Create new handle
-  *handle = curHandle;
-  curHandle++;
+  *reinterpret_cast<void**>(handle) = reinterpret_cast<void*>(std::atomic_fetch_add(&curHandle, 1));
 
   // Check that the current handle is available (it better be!)
   {
@@ -158,7 +158,7 @@ gputtResult gputtPlan(gputtHandle *handle, int rank, const int *dim,
   std::list<gputtPlan_t> plans;
   if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(),
                                 redDim.data(), redPermutation.data(),
-                                sizeofType, deviceID, prop, plans))
+                                dtype, deviceID, prop, plans))
     return GPUTT_INTERNAL_ERROR;
 
 #if 0
@@ -255,13 +255,17 @@ gputtResult gputtPlan(gputtHandle *handle, int rank, const int *dim,
 }
 
 gputtResult gputtPlanMeasure(gputtHandle *handle, int rank, const int *dim,
-                             const int *permutation, size_t sizeofType,
-                             gpuStream_t stream, const void *idata, void *odata,
+                             const int *permutation, gputtDataType dtype,
+                             gputtStream stream_, const void *idata, void *odata,
                              const void *alpha, const void *beta) {
+
+  if (!handle) return GPUTT_INVALID_PARAMETER;
+
+  auto stream = reinterpret_cast<gpuStream>(stream_);
 
   // Check that input parameters are valid
   gputtResult inpCheck =
-      gputtPlanCheckInput(rank, dim, permutation, sizeofType);
+      gputtPlanCheckInput(rank, dim, permutation, dtype);
   if (inpCheck != GPUTT_SUCCESS)
     return inpCheck;
 
@@ -269,8 +273,7 @@ gputtResult gputtPlanMeasure(gputtHandle *handle, int rank, const int *dim,
     return GPUTT_INVALID_PARAMETER;
 
   // Create new handle
-  *handle = curHandle;
-  curHandle++;
+  *reinterpret_cast<void**>(handle) = reinterpret_cast<void*>(std::atomic_fetch_add(&curHandle, 1));
 
   // Check that the current handle is available (it better be!)
   {
@@ -293,15 +296,15 @@ gputtResult gputtPlanMeasure(gputtHandle *handle, int rank, const int *dim,
   std::list<gputtPlan_t> plans;
 #if 0
   // if (rank != redDim.size()) {
-    if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), sizeofType, prop, plans)) return GPUTT_INTERNAL_ERROR;
+    if (!createPlans(redDim.size(), redDim.data(), redPermutation.data(), dtype, prop, plans)) return GPUTT_INTERNAL_ERROR;
   // }
 
   // Create plans from non-reduced ranks
-  // if (!createPlans(rank, dim, permutation, sizeofType, prop, plans)) return GPUTT_INTERNAL_ERROR;
+  // if (!createPlans(rank, dim, permutation, dtype, prop, plans)) return GPUTT_INTERNAL_ERROR;
 #else
   if (!gputtPlan_t::createPlans(rank, dim, permutation, redDim.size(),
                                 redDim.data(), redPermutation.data(),
-                                sizeofType, deviceID, prop, plans))
+                                dtype, deviceID, prop, plans))
     return GPUTT_INTERNAL_ERROR;
 #endif
 
@@ -311,7 +314,7 @@ gputtResult gputtPlanMeasure(gputtHandle *handle, int rank, const int *dim,
   // }
 
   // // Count the number of elements
-  size_t numBytes = sizeofType;
+  size_t numBytes = sizeofType(dtype);
   for (int i = 0; i < rank; i++)
     numBytes *= dim[i];
 
@@ -371,7 +374,7 @@ gputtResult gputtPlanMeasure(gputtHandle *handle, int rank, const int *dim,
   return GPUTT_SUCCESS;
 }
 
-void gputtDestroy_callback(gpuStream_t stream, gpuError_t status,
+void gputtDestroy_callback(gpuStream stream, gpuError_t status,
                            void *userData) {
   gputtPlan_t *plan = (gputtPlan_t *)userData;
   delete plan;

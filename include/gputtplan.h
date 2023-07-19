@@ -26,8 +26,8 @@ SOFTWARE.
 #define GPUTTPLAN_H
 
 #include "gputt.h"
-#include "gputtTypes.h"
-#include "gputt_runtime.h"
+#include "gputt_internal.h"
+
 #include <list>
 #include <vector>
 
@@ -46,6 +46,8 @@ SOFTWARE.
 #endif
 
 const int TILEROWS = 8;
+
+#define sizeofType(dtype) (static_cast<size_t>((dtype) & 0xff))
 
 // Tells how tensor is split into Mm and Mk and what method is used
 // NOTE: sizeMm and sizeMk fully define the split
@@ -105,7 +107,7 @@ public:
 
   // Bytes the shared memory space that needs to be allocated
   // (can be larger than volShmem() due to padding)
-  size_t shmemAlloc(int sizeofType) const;
+  size_t shmemAlloc(gputtDataType dtype) const;
 };
 
 class LaunchConfig {
@@ -128,7 +130,7 @@ public:
   int deviceID;
 
   // CUDA stream associated with the plan
-  gpuStream_t stream;
+  gpuStream stream;
 
   // Kernel launch configuration
   LaunchConfig launchConfig;
@@ -136,8 +138,8 @@ public:
   // Rank of the tensor
   int rank;
 
-  // Size of the tensor elements in bytes
-  size_t sizeofType;
+  // Type of the tensor elements
+  gputtDataType dtype;
 
   TensorSplit tensorSplit;
 
@@ -187,7 +189,7 @@ public:
   gputtPlan_t();
   ~gputtPlan_t();
   void print();
-  void setStream(gpuStream_t stream_in);
+  void setStream(gpuStream stream_in);
   bool countCycles(gpuDeviceProp_t &prop, const int numPosMbarSample = 0);
   void activate();
   void nullDevicePointers();
@@ -195,7 +197,7 @@ public:
   static bool createPlans(const int rank, const int *dim,
                           const int *permutation, const int redRank,
                           const int *redDim, const int *redPermutation,
-                          const size_t sizeofType, const int deviceID,
+                          const gputtDataType dtype, const int deviceID,
                           const gpuDeviceProp_t &prop,
                           std::list<gputtPlan_t> &plans);
 
@@ -205,35 +207,35 @@ public:
 private:
   static bool createTrivialPlans(const int rank, const int *dim,
                                  const int *permutation,
-                                 const size_t sizeofType, const int deviceID,
+                                 const gputtDataType dtype, const int deviceID,
                                  const gpuDeviceProp_t &prop,
                                  std::list<gputtPlan_t> &plans);
 
   static bool createTiledPlans(const int rank, const int *dim,
-                               const int *permutation, const size_t sizeofType,
+                               const int *permutation, const gputtDataType dtype,
                                const int deviceID, const gpuDeviceProp_t &prop,
                                std::list<gputtPlan_t> &plans);
 
   static bool createTiledCopyPlans(const int rank, const int *dim,
                                    const int *permutation,
-                                   const size_t sizeofType, const int deviceID,
+                                   const gputtDataType dtype, const int deviceID,
                                    const gpuDeviceProp_t &prop,
                                    std::list<gputtPlan_t> &plans);
 
   static bool createPackedPlans(const int rank, const int *dim,
-                                const int *permutation, const size_t sizeofType,
+                                const int *permutation, const gputtDataType dtype,
                                 const int deviceID, const gpuDeviceProp_t &prop,
                                 std::list<gputtPlan_t> &plans);
 
   static bool createPackedSplitPlans(const int rank, const int *dim,
                                      const int *permutation,
-                                     const size_t sizeofType,
+                                     const gputtDataType dtype,
                                      const int deviceID,
                                      const gpuDeviceProp_t &prop,
                                      std::list<gputtPlan_t> &plans);
 
   bool setup(const int rank_in, const int *dim, const int *permutation,
-             const size_t sizeofType_in, const TensorSplit &tensorSplit_in,
+             const gputtDataType dtype_in, const TensorSplit &tensorSplit_in,
              const LaunchConfig &launchConfig_in, const int numActiveBlock_in);
 };
 

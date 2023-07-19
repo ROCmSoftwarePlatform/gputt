@@ -835,10 +835,10 @@ bool bench_tensor(std::vector<int> &dim, std::vector<int> &permutation) {
   }
   if (use_gputtPlanMeasure) {
     gputtCheck(gputtPlanMeasure(&plan, rank, dim.data(), permutation.data(),
-                                sizeof(T), 0, dataIn, dataOut));
+                                gputtGetDataType<T>(), 0, dataIn, dataOut));
   } else {
     gputtCheck(
-        gputtPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
+        gputtPlan(&plan, rank, dim.data(), permutation.data(), gputtGetDataType<T>(), 0));
   }
   if (use_plantimer) {
     std::chrono::high_resolution_clock::time_point plan_end;

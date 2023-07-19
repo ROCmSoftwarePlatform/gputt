@@ -1,5 +1,5 @@
 #include <gputt.h>
-#include <gputt_runtime.h>
+#include <gputt_internal.h>
 
 #include <iostream>
 #include <vector>
@@ -87,7 +87,7 @@ template <typename T> static void test() {
 
     // Only use the methods that are supported for the given parameters.
     if (GPUTT_SUCCESS ==
-        gputtPlan(&plan, 4, dim, permutation, sizeof(idata[0]), 0, method))
+        gputtPlan(&plan, 4, dim, permutation, gputtGetDataType<T>(), 0, method))
       plans.push_back(plan);
   }
 

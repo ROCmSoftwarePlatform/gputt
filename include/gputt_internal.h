@@ -1,5 +1,33 @@
-#ifndef GPUTT_RUNTIME_H
-#define GPUTT_RUNTIME_H
+/******************************************************************************
+MIT License
+
+Copyright (c) 2016 Antti-Pekka Hynninen
+Copyright (c) 2016 Oak Ridge National Laboratory (UT-Batelle)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*******************************************************************************/
+#ifndef GPUTT_TYPES_H
+#define GPUTT_TYPES_H
+
+#include "gputt.h"
+
+#define MAX_REG_STORAGE 8
 
 #ifdef __HIPCC__
 #include <hip/hip_runtime.h>
@@ -37,7 +65,7 @@
 #define gpuSharedMemBankSizeEightByte hipSharedMemBankSizeEightByte
 #define gpuSharedMemBankSizeFourByte hipSharedMemBankSizeFourByte
 #define gpuSharedMemConfig hipSharedMemConfig
-#define gpuStream_t hipStream_t
+#define gpuStream hipStream_t
 #define gpuStreamCreate hipStreamCreate
 #define gpuStreamDestroy hipStreamDestroy
 #define gpuSuccess hipSuccess
@@ -76,10 +104,48 @@
 #define gpuSharedMemBankSizeEightByte cudaSharedMemBankSizeEightByte
 #define gpuSharedMemBankSizeFourByte cudaSharedMemBankSizeFourByte
 #define gpuSharedMemConfig cudaSharedMemConfig
-#define gpuStream_t cudaStream_t
+#define gpuStream cudaStream_t
 #define gpuStreamCreate cudaStreamCreate
 #define gpuStreamDestroy cudaStreamDestroy
 #define gpuSuccess cudaSuccess
 #endif // __HIP_PLATFORM_HCC__
 
-#endif // GPUTT_RUNTIME_H
+#ifdef __HIPCC__
+#include <hip/hip_fp16.h>
+#else
+#include <cuda_fp16.h>
+#endif
+
+template<typename T> gputtDataType gputtGetDataType() { return gputtDataTypeUnknown; }
+template<> inline gputtDataType gputtGetDataType<  double>() { return gputtDataTypeFloat64; }
+template<> inline gputtDataType gputtGetDataType<   float>() { return gputtDataTypeFloat32; }
+template<> inline gputtDataType gputtGetDataType<  __half>() { return gputtDataTypeFloat16; }
+template<> inline gputtDataType gputtGetDataType< int64_t>() { return gputtDataTypeInt64; }
+template<> inline gputtDataType gputtGetDataType<uint64_t>() { return gputtDataTypeUInt64; }
+template<> inline gputtDataType gputtGetDataType< int32_t>() { return gputtDataTypeInt32; }
+template<> inline gputtDataType gputtGetDataType<uint32_t>() { return gputtDataTypeUInt32; }
+template<> inline gputtDataType gputtGetDataType< int16_t>() { return gputtDataTypeInt16; }
+template<> inline gputtDataType gputtGetDataType<uint16_t>() { return gputtDataTypeUInt16; }
+template<> inline gputtDataType gputtGetDataType<  int8_t>() { return gputtDataTypeInt8; }
+template<> inline gputtDataType gputtGetDataType< uint8_t>() { return gputtDataTypeUInt8; }
+
+// Tensor conversion constants
+struct TensorConv {
+  int c;
+  int d;
+  int ct;
+};
+
+// Tensor conversion constants input & output pair
+// TODO Use nested struct TensorConv instead
+struct TensorConvInOut {
+  int c_in;
+  int d_in;
+  int ct_in;
+
+  int c_out;
+  int d_out;
+  int ct_out;
+};
+
+#endif // GPUTT_TYPES_H

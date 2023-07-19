@@ -420,7 +420,7 @@ bool test4() {
 
   const int numStream = 10;
 
-  gpuStream_t streams[numStream];
+  gpuStream streams[numStream];
   for (int i = 0; i < numStream; i++) {
     gpuCheck(gpuStreamCreate(&streams[i]));
   }
@@ -431,7 +431,7 @@ bool test4() {
 
   for (int i = 0; i < numStream; i++) {
     gputtCheck(gputtPlan(&plans[i], dim.size(), dim.data(), permutation.data(),
-                         sizeof(double), streams[i]));
+                         gputtDataTypeFloat64, streams[i]));
     gputtCheck(gputtExecute(plans[i], dataIn, dataOut));
   }
 
@@ -511,7 +511,7 @@ bool test_tensor(std::vector<int> &dim, std::vector<int> &permutation) {
 
   gputtHandle plan;
   gputtCheck(
-      gputtPlan(&plan, rank, dim.data(), permutation.data(), sizeof(T), 0));
+      gputtPlan(&plan, rank, dim.data(), permutation.data(), gputtGetDataType<T>(), 0));
   set_device_array<T>((T *)dataOut, -1, vol);
   gpuCheck(gpuDeviceSynchronize());
 

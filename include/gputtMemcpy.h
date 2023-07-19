@@ -25,13 +25,13 @@ SOFTWARE.
 #ifndef CUDAMEMCPY_H
 #define CUDAMEMCPY_H
 
-#include "gputt_runtime.h"
+#include "gputt_internal.h"
 
 template <typename T>
-void scalarCopy(const int n, const T *data_in, T *data_out, gpuStream_t stream);
+void scalarCopy(const int n, const T *data_in, T *data_out, gpuStream stream);
 template <typename T>
-void vectorCopy(const int n, T *data_in, T *data_out, gpuStream_t stream);
+void vectorCopy(const int n, T *data_in, T *data_out, gpuStream stream);
 void memcpyFloat(const int n, float *data_in, float *data_out,
-                 gpuStream_t stream);
+                 gpuStream stream);
 
 #endif // CUDAMEMCPY_H

@@ -25,7 +25,6 @@ SOFTWARE.
 #ifndef GPUTTGPUMODEL_H
 #define GPUTTGPUMODEL_H
 
-#include "gputtTypes.h"
 #include "gputtplan.h"
 #include "int_vector.h"
 #include <vector>
@@ -86,14 +85,14 @@ void countTiledGlTransactions(const bool leadVolSame,
                               int &gld_tran, int &gst_tran, int &gld_req,
                               int &gst_req, int &cl_full, int &cl_part);
 
-double cyclesPacked(const bool isSplit, const size_t sizeofType,
+double cyclesPacked(const bool isSplit, const gputtDataType dtype,
                     const gpuDeviceProp_t &prop, int nthread,
                     int numActiveBlock, float mlp, int gld_req, int gst_req,
                     int gld_tran, int gst_tran, int sld_req, int sst_req,
                     int sld_tran, int sst_tran, int num_iter, int cl_full,
                     int cl_part);
 
-double cyclesTiled(const bool isCopy, const size_t sizeofType,
+double cyclesTiled(const bool isCopy, const gputtDataType dtype,
                    const gpuDeviceProp_t &prop, int nthread, int numActiveBlock,
                    float mlp, int gld_req, int gst_req, int gld_tran,
                    int gst_tran, int sld_req, int sst_req, int sld_tran,

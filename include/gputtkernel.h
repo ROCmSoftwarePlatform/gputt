@@ -28,7 +28,7 @@ SOFTWARE.
 
 void gputtKernelSetSharedMemConfig();
 
-int gputtKernelLaunchConfiguration(const int sizeofType, const TensorSplit &ts,
+int gputtKernelLaunchConfiguration(const gputtDataType dtype, const TensorSplit &ts,
                                    const int deviceID,
                                    const gpuDeviceProp_t &prop,
                                    LaunchConfig &lc);

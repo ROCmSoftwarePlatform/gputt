@@ -410,7 +410,7 @@ size_t TensorSplit::volMmkUsed() const {
 // Bytes the shared memory space that needs to be allocated
 // (can be larger than shmem() due to padding)
 //
-size_t TensorSplit::shmemAlloc(int sizeofType) const {
+size_t TensorSplit::shmemAlloc(gputtDataType dtype) const {
   size_t vol = 0;
 
   switch (method) {
@@ -420,16 +420,16 @@ size_t TensorSplit::shmemAlloc(int sizeofType) const {
   } break;
 
   case gputtTransposeMethodPacked: {
-    vol = (size_t)volMmk * sizeofType;
+    vol = (size_t)volMmk * sizeofType(dtype);
   } break;
 
   case gputtTransposeMethodPackedSplit: {
     vol = (size_t)(splitDim / numSplit + ((splitDim % numSplit) > 0)) *
-          volMmkUnsplit * sizeofType;
+          volMmkUnsplit * sizeofType(dtype);
   } break;
 
   case gputtTransposeMethodTiled: {
-    vol = (TILEDIM + 1) * TILEDIM * sizeofType;
+    vol = (TILEDIM + 1) * TILEDIM * sizeofType(dtype);
   } break;
 
   case gputtTransposeMethodTiledCopy: {
@@ -453,7 +453,7 @@ bool planExists(TensorSplit &ts, std::list<gputtPlan_t> &plans) {
 
 bool gputtPlan_t::createTrivialPlans(const int rank, const int *dim,
                                      const int *permutation,
-                                     const size_t sizeofType,
+                                     const gputtDataType dtype,
                                      const int deviceID,
                                      const gpuDeviceProp_t &prop,
                                      std::list<gputtPlan_t> &plans) {
@@ -464,10 +464,10 @@ bool gputtPlan_t::createTrivialPlans(const int rank, const int *dim,
     ts.update(1, 1, rank, dim, permutation);
     LaunchConfig lc;
     int numActiveBlock =
-        gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+        gputtKernelLaunchConfiguration(dtype, ts, deviceID, prop, lc);
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
       gputtPlan_t plan;
-      if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc,
+      if (!plan.setup(rank, dim, permutation, dtype, ts, lc,
                       numActiveBlock))
         return false;
       plans.emplace_back(plan);
@@ -479,7 +479,7 @@ bool gputtPlan_t::createTrivialPlans(const int rank, const int *dim,
 
 bool gputtPlan_t::createTiledPlans(const int rank, const int *dim,
                                    const int *permutation,
-                                   const size_t sizeofType, const int deviceID,
+                                   const gputtDataType dtype, const int deviceID,
                                    const gpuDeviceProp_t &prop,
                                    std::list<gputtPlan_t> &plans) {
 
@@ -489,10 +489,10 @@ bool gputtPlan_t::createTiledPlans(const int rank, const int *dim,
     ts.update(1, 1, rank, dim, permutation);
     LaunchConfig lc;
     int numActiveBlock =
-        gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+        gputtKernelLaunchConfiguration(dtype, ts, deviceID, prop, lc);
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
       gputtPlan_t plan;
-      if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc,
+      if (!plan.setup(rank, dim, permutation, dtype, ts, lc,
                       numActiveBlock))
         return false;
       plans.emplace_back(plan);
@@ -504,7 +504,7 @@ bool gputtPlan_t::createTiledPlans(const int rank, const int *dim,
 
 bool gputtPlan_t::createTiledCopyPlans(const int rank, const int *dim,
                                        const int *permutation,
-                                       const size_t sizeofType,
+                                       const gputtDataType dtype,
                                        const int deviceID,
                                        const gpuDeviceProp_t &prop,
                                        std::list<gputtPlan_t> &plans) {
@@ -525,10 +525,10 @@ bool gputtPlan_t::createTiledCopyPlans(const int rank, const int *dim,
     }
     LaunchConfig lc;
     int numActiveBlock =
-        gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+        gputtKernelLaunchConfiguration(dtype, ts, deviceID, prop, lc);
     if (numActiveBlock > 0 && !planExists(ts, plans)) {
       gputtPlan_t plan;
-      if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc,
+      if (!plan.setup(rank, dim, permutation, dtype, ts, lc,
                       numActiveBlock))
         return false;
       plans.emplace_back(plan);
@@ -540,7 +540,7 @@ bool gputtPlan_t::createTiledCopyPlans(const int rank, const int *dim,
 
 bool gputtPlan_t::createPackedPlans(const int rank, const int *dim,
                                     const int *permutation,
-                                    const size_t sizeofType, const int deviceID,
+                                    const gputtDataType dtype, const int deviceID,
                                     const gpuDeviceProp_t &prop,
                                     std::list<gputtPlan_t> &plans) {
 
@@ -551,13 +551,13 @@ bool gputtPlan_t::createPackedPlans(const int rank, const int *dim,
       ts.method = gputtTransposeMethodPacked;
       ts.update(numMm, numMk, rank, dim, permutation);
       int numActiveBlock =
-          gputtKernelLaunchConfiguration(sizeofType, ts, deviceID, prop, lc);
+          gputtKernelLaunchConfiguration(dtype, ts, deviceID, prop, lc);
       // Does not fit on the device, break out of inner loop
       if (numActiveBlock == 0)
         break;
       if (!planExists(ts, plans)) {
         gputtPlan_t plan;
-        if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc,
+        if (!plan.setup(rank, dim, permutation, dtype, ts, lc,
                         numActiveBlock))
           return false;
         plans.emplace_back(plan);
@@ -570,7 +570,7 @@ bool gputtPlan_t::createPackedPlans(const int rank, const int *dim,
 
 bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
                                          const int *permutation,
-                                         const size_t sizeofType,
+                                         const gputtDataType dtype,
                                          const int deviceID,
                                          const gpuDeviceProp_t &prop,
                                          std::list<gputtPlan_t> &plans) {
@@ -582,7 +582,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
       ts.method = gputtTransposeMethodPacked;
       ts.update(numMm, numMk, rank, dim, permutation);
       // Amount of shared memory required
-      size_t shmemsize = ts.shmemAlloc(sizeofType);
+      size_t shmemsize = ts.shmemAlloc(dtype);
       if (shmemsize > prop.sharedMemPerBlock) {
         // Does not fit into shared memory, need to split
         ts.method = gputtTransposeMethodPackedSplit;
@@ -605,7 +605,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
         }
         //
         ts.update(numMm, numMk, rank, dim, permutation);
-        int minNumSplit = (ts.splitDim * ts.volMmkUnsplit * sizeofType - 1) /
+        int minNumSplit = (ts.splitDim * ts.volMmkUnsplit * sizeofType(dtype) - 1) /
                               prop.sharedMemPerBlock +
                           1;
         int maxNumSplit = std::max(
@@ -627,7 +627,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
         LaunchConfig lc0, lc1, lc2;
         for (ts.numSplit = minNumSplit; ts.numSplit <= maxNumSplit;
              ts.numSplit++) {
-          numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, ts,
+          numActiveBlock = gputtKernelLaunchConfiguration(dtype, ts,
                                                           deviceID, prop, lc);
           if (numActiveBlock != 0) {
             int volMmkUsed = ts.volMmkUsed();
@@ -664,7 +664,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
                                       (unsigned long long int)(ts.numSplit + 1);
         if (!planExists(ts, plans) && dim0 < dim_cutoff) {
           gputtPlan_t plan;
-          if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc0,
+          if (!plan.setup(rank, dim, permutation, dtype, ts, lc0,
                           numActiveBlock0))
             return false;
           plans.emplace_back(plan);
@@ -677,7 +677,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
               (unsigned long long int)(ts.numSplit + 1);
           if (!planExists(ts, plans) && dim1 < dim_cutoff) {
             gputtPlan_t plan;
-            if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc1,
+            if (!plan.setup(rank, dim, permutation, dtype, ts, lc1,
                             numActiveBlock1))
               return false;
             plans.emplace_back(plan);
@@ -691,7 +691,7 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
               (unsigned long long int)(ts.numSplit + 1);
           if (!planExists(ts, plans) && dim2 < dim_cutoff) {
             gputtPlan_t plan;
-            if (!plan.setup(rank, dim, permutation, sizeofType, ts, lc2,
+            if (!plan.setup(rank, dim, permutation, dtype, ts, lc2,
                             numActiveBlock2))
               return false;
             plans.emplace_back(plan);
@@ -710,33 +710,33 @@ bool gputtPlan_t::createPackedSplitPlans(const int rank, const int *dim,
 bool gputtPlan_t::createPlans(const int rank, const int *dim,
                               const int *permutation, const int rankRed,
                               const int *dimRed, const int *permutationRed,
-                              const size_t sizeofType, const int deviceID,
+                              const gputtDataType dtype, const int deviceID,
                               const gpuDeviceProp_t &prop,
                               std::list<gputtPlan_t> &plans) {
 
   size_t size0 = plans.size();
-  /* if (!createTiledCopyPlans(rank, dim, permutation, sizeofType, deviceID,
+  /* if (!createTiledCopyPlans(rank, dim, permutation, dtype, deviceID,
    * prop, plans)) return false;*/
-  if (!createTrivialPlans(rankRed, dimRed, permutationRed, sizeofType, deviceID,
+  if (!createTrivialPlans(rankRed, dimRed, permutationRed, dtype, deviceID,
                           prop, plans))
     return false;
   // If Trivial plan was created, that's the only one we need
   if (size0 != plans.size())
     return true;
-  if (!createTiledCopyPlans(rankRed, dimRed, permutationRed, sizeofType,
+  if (!createTiledCopyPlans(rankRed, dimRed, permutationRed, dtype,
                             deviceID, prop, plans))
     return false;
-  if (!createTiledPlans(rankRed, dimRed, permutationRed, sizeofType, deviceID,
+  if (!createTiledPlans(rankRed, dimRed, permutationRed, dtype, deviceID,
                         prop, plans))
     return false;
-  if (!createPackedPlans(rank, dim, permutation, sizeofType, deviceID, prop,
+  if (!createPackedPlans(rank, dim, permutation, dtype, deviceID, prop,
                          plans))
     return false;
-  if (!createPackedSplitPlans(rank, dim, permutation, sizeofType, deviceID,
+  if (!createPackedSplitPlans(rank, dim, permutation, dtype, deviceID,
                               prop, plans))
     return false;
   if (rank != rankRed) {
-    if (!createPackedSplitPlans(rankRed, dimRed, permutationRed, sizeofType,
+    if (!createPackedSplitPlans(rankRed, dimRed, permutationRed, dtype,
                                 deviceID, prop, plans))
       return false;
   }
@@ -829,13 +829,13 @@ void gputtPlan_t::print() {
 // launchConfig_in and numActiveBlock_in
 //
 bool gputtPlan_t::setup(const int rank_in, const int *dim,
-                        const int *permutation, const size_t sizeofType_in,
+                        const int *permutation, const gputtDataType dtype_in,
                         const TensorSplit &tensorSplit_in,
                         const LaunchConfig &launchConfig_in,
                         const int numActiveBlock_in) {
 
   rank = rank_in;
-  sizeofType = sizeofType_in;
+  dtype = dtype_in;
   tensorSplit = tensorSplit_in;
   numActiveBlock = numActiveBlock_in;
   launchConfig = launchConfig_in;
@@ -852,7 +852,7 @@ bool gputtPlan_t::setup(const int rank_in, const int *dim,
   }
 
   // Setup launch configuration
-  // numActiveBlock = gputtKernelLaunchConfiguration(sizeofType, tensorSplit,
+  // numActiveBlock = gputtKernelLaunchConfiguration(dtype, tensorSplit,
   // prop, launchConfig);
 
   // Build cI
@@ -1078,9 +1078,9 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t &prop,
 
   // Number of elements that are loaded per memory transaction:
   // 128 bytes per transaction
-  const int accWidth = 128 / sizeofType;
+  const int accWidth = 128 / sizeofType(dtype);
   // L2 cache line width (assumed)
-  const int cacheWidth = prop.warpSize / sizeofType;
+  const int cacheWidth = prop.warpSize / sizeofType(dtype);
 
   if (tensorSplit.method == gputtTransposeMethodTiled) {
     // Global memory
@@ -1678,14 +1678,14 @@ bool gputtPlan_t::countCycles(gpuDeviceProp_t &prop,
   if (tensorSplit.method == gputtTransposeMethodPacked ||
       tensorSplit.method == gputtTransposeMethodPackedSplit) {
     cycles = cyclesPacked(tensorSplit.method == gputtTransposeMethodPackedSplit,
-                          sizeofType, prop, numthread, numActiveBlock,
+                          dtype, prop, numthread, numActiveBlock,
                           launchConfig.numRegStorage, gld_req, gst_req,
                           gld_tran, gst_tran, sld_req, sst_req, sld_tran,
                           sst_tran, num_iter, cl_full_l2, cl_part_l2);
   } else if (tensorSplit.method == gputtTransposeMethodTiled ||
              tensorSplit.method == gputtTransposeMethodTiledCopy) {
     cycles = cyclesTiled(tensorSplit.method == gputtTransposeMethodTiledCopy,
-                         sizeofType, prop, numthread, numActiveBlock, mlp,
+                         dtype, prop, numthread, numActiveBlock, mlp,
                          gld_req, gst_req, gld_tran, gst_tran, sld_req, sst_req,
                          sld_tran, sst_tran, num_iter, cl_full_l2, cl_part_l2);
   }
@@ -1755,4 +1755,4 @@ gputtPlan_t::~gputtPlan_t() {
     gpuCheck(gpuFree(Mm));
 }
 
-void gputtPlan_t::setStream(gpuStream_t stream_in) { stream = stream_in; }
+void gputtPlan_t::setStream(gpuStream stream_in) { stream = stream_in; }
