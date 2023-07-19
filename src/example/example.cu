@@ -27,6 +27,18 @@
     }                                                                          \
   } while (0)
 
+__host__
+inline bool operator!=(const __half& x, const __half& y)
+{
+  return memcmp(&x, &y, sizeof(__half));
+}
+
+inline std::ostream& operator<<(std::ostream& os, __half& val)
+{
+  os << static_cast<double>(val);
+  return os;
+}
+
 template <typename D, typename T>
 static void check(D &dim, T &idata, T &odata) {
   // Perform the same permutation on the CPU.
@@ -133,10 +145,17 @@ template <typename T> static void test() {
 }
 
 int main(int argc, char *argv[]) {
-  // Using integer element type to ease elements comparison.
-  test<uint16_t>();
-  test<uint32_t>();
+  test<  double>();
+  test<   float>();
+  test<  __half>();
+  test< int64_t>();
   test<uint64_t>();
+  test< int32_t>();
+  test<uint32_t>();
+  test< int16_t>();
+  test<uint16_t>();
+  test<  int8_t>();
+  test< uint8_t>();
 
   return 0;
 }
