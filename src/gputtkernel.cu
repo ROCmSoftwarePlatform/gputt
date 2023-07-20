@@ -600,6 +600,8 @@ void gputtKernelSetSharedMemConfig() {
   gpuCheck(gpuFuncSetSharedMemConfig(
       reinterpret_cast<void *>(&transposeTiledCopy<double, true>),
       gpuSharedMemBankSizeEightByte));
+
+  // TODO All other types!
 }
 
 // Caches for PackedSplit kernels. One cache for all devices
@@ -645,6 +647,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;            \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;            \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;            \
+    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;            \
+    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;            \
     }                                                                     \
     break
 
@@ -676,6 +680,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;            \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;            \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;            \
+    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;            \
+    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;            \
     }                                                                     \
     break
 
@@ -734,6 +740,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
   case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;              \
   case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;              \
   case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;              \
+  case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;              \
+  case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;              \
   }                                                                       \
   break
 
@@ -762,6 +770,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
   case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;              \
   case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;              \
   case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;              \
+  case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;              \
+  case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;              \
   }                                                                       \
   break
 
@@ -994,26 +1004,16 @@ int gputtKernelLaunchConfiguration(const gputtDataType dtype, const TensorSplit 
 template<typename T>
 T get_value(const void* val, T default_val) { return val ? *reinterpret_cast<const T*>(val) : default_val; }
 
-template<typename T>
-T get_value(gputtDataType dtype, const void* val, T default_val)
+__host__
+inline bool operator!=(const __half& x, const __half& y)
 {
-  if (!val) return default_val;
+  return memcmp(&x, &y, sizeof(__half));
+}
 
-  switch (dtype)
-  {
-  case gputtDataTypeFloat64 : return static_cast<T>(*reinterpret_cast<const   double*>(val));
-  case gputtDataTypeFloat32 : return static_cast<T>(*reinterpret_cast<const    float*>(val));
-  case gputtDataTypeFloat16 : return static_cast<T>(*reinterpret_cast<const   __half*>(val));
-  case gputtDataTypeInt64   : return static_cast<T>(*reinterpret_cast<const  int64_t*>(val));
-  case gputtDataTypeUInt64  : return static_cast<T>(*reinterpret_cast<const uint64_t*>(val));
-  case gputtDataTypeInt32   : return static_cast<T>(*reinterpret_cast<const  int32_t*>(val));
-  case gputtDataTypeUInt32  : return static_cast<T>(*reinterpret_cast<const uint32_t*>(val));
-  case gputtDataTypeInt16   : return static_cast<T>(*reinterpret_cast<const  int16_t*>(val));
-  case gputtDataTypeUInt16  : return static_cast<T>(*reinterpret_cast<const uint16_t*>(val));
-  case gputtDataTypeInt8    : return static_cast<T>(*reinterpret_cast<const   int8_t*>(val));
-  case gputtDataTypeUInt8   : return static_cast<T>(*reinterpret_cast<const  uint8_t*>(val));
-  }
-  return T{};
+__host__
+inline bool operator==(const __half& x, const __half& y)
+{
+  return !(x != y);
 }
 
 bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
@@ -1023,29 +1023,57 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   TensorSplit &ts = plan.tensorSplit;
 
   switch (ts.method) {
+
+#define CALL1(TYPE, betaIsZero) do {                                              \
+  /* TODO Explicit Ax + By kernel (on ROCm we don't have Thrust) */               \
+  gpuCheck(gpuMemcpyAsync(dataOut, dataIn,                                        \
+                          ts.volMmk * ts.volMbar * sizeofType(plan.dtype),        \
+                          gpuMemcpyDefault, plan.stream));                        \
+  } while (0)
+
+#define CALL0(TYPE) do {                                                       \
+  auto betaIsZero = get_value<TYPE>(betaPtr, TYPE(0)) == TYPE(0);              \
+  if (betaIsZero)                                                              \
+    CALL1(TYPE, true /* betaIsZero */);                                        \
+  else                                                                         \
+    CALL1(TYPE, false /* betaIsZero */);                                       \
+  } while (0)                                                                  \
+
+#define CALL()                                                                 \
+  switch(plan.dtype)                                                           \
+  {                                                                            \
+  case gputtDataTypeFloat64 : CALL0(  double); break;                          \
+  case gputtDataTypeFloat32 : CALL0(   float); break;                          \
+  case gputtDataTypeFloat16 : CALL0(  __half); break;                          \
+  case gputtDataTypeInt64   : CALL0( int64_t); break;                          \
+  case gputtDataTypeUInt64  : CALL0(uint64_t); break;                          \
+  case gputtDataTypeInt32   : CALL0( int32_t); break;                          \
+  case gputtDataTypeUInt32  : CALL0(uint32_t); break;                          \
+  case gputtDataTypeInt16   : CALL0( int16_t); break;                          \
+  case gputtDataTypeUInt16  : CALL0(uint16_t); break;                          \
+  case gputtDataTypeInt8    : CALL0(  int8_t); break;                          \
+  case gputtDataTypeUInt8   : CALL0( uint8_t); break;                          \
+  case gputtDataTypeInt8x4  : CALL0(   char4); break;                          \
+  case gputtDataTypeUInt8x4 : CALL0(  uchar4); break;                          \
+  }                                                                            \
+  break      
+
   case gputtTransposeMethodTrivial :
-    if (get_value<double>(plan.dtype, alphaPtr, 1) != 1 ||
-        get_value<double>(plan.dtype, betaPtr, 0) != 0) {
-      fprintf(stderr, "gpuTT ERROR: this case still has to be implemented\n");
-      return false;
-    }
-    gpuCheck(gpuMemcpyAsync(dataOut, dataIn,
-                            ts.volMmk * ts.volMbar * sizeofType(plan.dtype),
-                            gpuMemcpyDefault, plan.stream));
+    CALL();
     break;
 
-#define CALL1(TYPE, NREG, betaIsZero) do {                                     \
-  transposePacked<TYPE, NREG, betaIsZero>                                      \
-      <<<lc.numblock, lc.numthread, lc.shmemsize, plan.stream>>>(              \
-          ts.volMmk, ts.volMbar, ts.sizeMmk, ts.sizeMbar,                      \
-          plan.Mmk, plan.Mbar, plan.Msh,                                       \
-          reinterpret_cast<const TYPE*>(dataIn),                               \
-          reinterpret_cast<TYPE*>(dataOut),                                    \
-          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+#define CALL1(TYPE, NREG, betaIsZero) do {                                        \
+  transposePacked<TYPE, NREG, betaIsZero>                                         \
+      <<<lc.numblock, lc.numthread, lc.shmemsize, plan.stream>>>(                 \
+          ts.volMmk, ts.volMbar, ts.sizeMmk, ts.sizeMbar,                         \
+          plan.Mmk, plan.Mbar, plan.Msh,                                          \
+          reinterpret_cast<const TYPE*>(dataIn),                                  \
+          reinterpret_cast<TYPE*>(dataOut),                                       \
+          get_value<TYPE>(alphaPtr, TYPE(1)), get_value<TYPE>(betaPtr, TYPE(0))); \
   } while (0)
 
 #define CALL0(TYPE, NREG) do {                                                 \
-  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
+  auto betaIsZero = get_value<TYPE>(betaPtr, TYPE(0)) == TYPE(0);              \
   if (betaIsZero)                                                              \
     CALL1(TYPE, NREG, true /* betaIsZero */);                                  \
   else                                                                         \
@@ -1067,6 +1095,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;                 \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;                 \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;                 \
+    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;                 \
+    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;                 \
     }                                                                          \
     break
 
@@ -1084,18 +1114,18 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
 #undef CALL0
 #undef CALL1
 
-#define CALL1(TYPE, NREG, betaIsZero) do {                                     \
-  transposePackedSplit<TYPE, NREG, betaIsZero>                                 \
-      <<<lc.numblock, lc.numthread, lc.shmemsize, plan.stream>>>(              \
-          ts.splitDim, ts.volMmkUnsplit, ts.volMbar, ts.sizeMmk, ts.sizeMbar,  \
-          plan.cuDimMm, plan.cuDimMk, plan.Mmk, plan.Mbar, plan.Msh,           \
-          reinterpret_cast<const TYPE*>(dataIn),                               \
-          reinterpret_cast<TYPE*>(dataOut),                                    \
-          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+#define CALL1(TYPE, NREG, betaIsZero) do {                                        \
+  transposePackedSplit<TYPE, NREG, betaIsZero>                                    \
+      <<<lc.numblock, lc.numthread, lc.shmemsize, plan.stream>>>(                 \
+          ts.splitDim, ts.volMmkUnsplit, ts.volMbar, ts.sizeMmk, ts.sizeMbar,     \
+          plan.cuDimMm, plan.cuDimMk, plan.Mmk, plan.Mbar, plan.Msh,              \
+          reinterpret_cast<const TYPE*>(dataIn),                                  \
+          reinterpret_cast<TYPE*>(dataOut),                                       \
+          get_value<TYPE>(alphaPtr, TYPE(1)), get_value<TYPE>(betaPtr, TYPE(0))); \
   } while (0)	
 
 #define CALL0(TYPE, NREG) do {                                                 \
-  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
+  auto betaIsZero = get_value<TYPE>(betaPtr, TYPE(0)) == TYPE(0);              \
   if (betaIsZero)                                                              \
     CALL1(TYPE, NREG, true /* betaIsZero */);                                  \
   else                                                                         \
@@ -1117,6 +1147,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;                 \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;                 \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;                 \
+    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;                 \
+    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;                 \
     }                                                                          \
     break
 
@@ -1134,18 +1166,18 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
 #undef CALL0
 #undef CALL1
 
-#define CALL1(TYPE, betaIsZero) do {                                           \
-  transposeTiled<TYPE, betaIsZero>                                             \
-      <<<lc.numblock, lc.numthread, 0, plan.stream>>>(                         \
-          ((ts.volMm - 1) / TILEDIM + 1), ts.volMbar, ts.sizeMbar,             \
-          plan.tiledVol, plan.cuDimMk, plan.cuDimMm, plan.Mbar,                \
-          reinterpret_cast<const TYPE*>(dataIn),                               \
-          reinterpret_cast<TYPE*>(dataOut),                                    \
-          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+#define CALL1(TYPE, betaIsZero) do {                                              \
+  transposeTiled<TYPE, betaIsZero>                                                \
+      <<<lc.numblock, lc.numthread, 0, plan.stream>>>(                            \
+          ((ts.volMm - 1) / TILEDIM + 1), ts.volMbar, ts.sizeMbar,                \
+          plan.tiledVol, plan.cuDimMk, plan.cuDimMm, plan.Mbar,                   \
+          reinterpret_cast<const TYPE*>(dataIn),                                  \
+          reinterpret_cast<TYPE*>(dataOut),                                       \
+          get_value<TYPE>(alphaPtr, TYPE(1)), get_value<TYPE>(betaPtr, TYPE(0))); \
   } while (0)
 
 #define CALL0(TYPE) do {                                                       \
-  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
+  auto betaIsZero = get_value<TYPE>(betaPtr, TYPE(0)) == TYPE(0);              \
   if (betaIsZero)                                                              \
     CALL1(TYPE, true /* betaIsZero */);                                        \
   else                                                                         \
@@ -1166,6 +1198,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t); break;                        \
     case gputtDataTypeInt8    : CALL0(  int8_t); break;                        \
     case gputtDataTypeUInt8   : CALL0( uint8_t); break;                        \
+    case gputtDataTypeInt8x4  : CALL0(   char4); break;                        \
+    case gputtDataTypeUInt8x4 : CALL0(  uchar4); break;                        \
     }                                                                          \
     break
 
@@ -1177,18 +1211,18 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
 #undef CALL0
 #undef CALL1
 
-#define CALL1(TYPE, betaIsZero) do {                                           \
-  transposeTiledCopy<TYPE, betaIsZero>                                         \
-      <<<lc.numblock, lc.numthread, 0, plan.stream>>>(                         \
-          ((ts.volMm - 1) / TILEDIM + 1), ts.volMbar, ts.sizeMbar,             \
-          plan.cuDimMk, plan.cuDimMm, plan.tiledVol, plan.Mbar,                \
-          reinterpret_cast<const TYPE*>(dataIn),                               \
-          reinterpret_cast<TYPE*>(dataOut),                                    \
-          get_value<TYPE>(alphaPtr, 1), get_value<TYPE>(betaPtr, 0));          \
+#define CALL1(TYPE, betaIsZero) do {                                              \
+  transposeTiledCopy<TYPE, betaIsZero>                                            \
+      <<<lc.numblock, lc.numthread, 0, plan.stream>>>(                            \
+          ((ts.volMm - 1) / TILEDIM + 1), ts.volMbar, ts.sizeMbar,                \
+          plan.cuDimMk, plan.cuDimMm, plan.tiledVol, plan.Mbar,                   \
+          reinterpret_cast<const TYPE*>(dataIn),                                  \
+          reinterpret_cast<TYPE*>(dataOut),                                       \
+          get_value<TYPE>(alphaPtr, TYPE(1)), get_value<TYPE>(betaPtr, TYPE(0))); \
   } while (0)
 
 #define CALL0(TYPE) do {                                                       \
-  auto betaIsZero = get_value<double>(plan.dtype, betaPtr, 0) == 0;            \
+  auto betaIsZero = get_value<TYPE>(betaPtr, TYPE(0)) == TYPE(0);              \
   if (betaIsZero)                                                              \
     CALL1(TYPE, true /* betaIsZero */);                                        \
   else                                                                         \
@@ -1209,6 +1243,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t); break;                        \
     case gputtDataTypeInt8    : CALL0(  int8_t); break;                        \
     case gputtDataTypeUInt8   : CALL0( uint8_t); break;                        \
+    case gputtDataTypeInt8x4  : CALL0(   char4); break;                        \
+    case gputtDataTypeUInt8x4 : CALL0(  uchar4); break;                        \
     }                                                                          \
     break
 

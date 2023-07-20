@@ -82,7 +82,9 @@ typedef enum GPUTT_API gputtDataType_t {
   gputtDataTypeInt16   = (sizeof( int16_t)     | (2 << 8)),
   gputtDataTypeUInt16  = (sizeof(uint16_t)     | (3 << 8)),
   gputtDataTypeInt8    = (sizeof(  int8_t)     | (1 << 8)),
-  gputtDataTypeUInt8   = (sizeof( uint8_t)     | (2 << 8))
+  gputtDataTypeUInt8   = (sizeof( uint8_t)     | (2 << 8)),
+  gputtDataTypeInt8x4  = (sizeof(  int8_t) * 4 | (4 << 8)),
+  gputtDataTypeUInt8x4 = (sizeof( uint8_t) * 4 | (5 << 8)),
 } gputtDataType;
 
 //

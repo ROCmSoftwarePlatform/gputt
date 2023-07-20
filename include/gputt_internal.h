@@ -128,6 +128,8 @@ template<> inline gputtDataType gputtGetDataType< int16_t>() { return gputtDataT
 template<> inline gputtDataType gputtGetDataType<uint16_t>() { return gputtDataTypeUInt16; }
 template<> inline gputtDataType gputtGetDataType<  int8_t>() { return gputtDataTypeInt8; }
 template<> inline gputtDataType gputtGetDataType< uint8_t>() { return gputtDataTypeUInt8; }
+template<> inline gputtDataType gputtGetDataType<   char4>() { return gputtDataTypeInt8x4; }
+template<> inline gputtDataType gputtGetDataType<  uchar4>() { return gputtDataTypeUInt8x4; }
 
 // Tensor conversion constants
 struct TensorConv {

@@ -39,6 +39,20 @@ inline std::ostream& operator<<(std::ostream& os, __half& val)
   return os;
 }
 
+inline std::ostream& operator<<(std::ostream& os, char4& val)
+{
+  os << static_cast<int>(val.x) << " " << static_cast<int>(val.y) << " " <<
+    static_cast<int>(val.z) << " " << static_cast<int>(val.w);
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, uchar4& val)
+{
+  os << static_cast<int>(val.x) << " " << static_cast<int>(val.y) << " " <<
+    static_cast<int>(val.z) << " " << static_cast<int>(val.w);
+  return os;
+}
+
 template <typename D, typename T>
 static void check(D &dim, T &idata, T &odata) {
   // Perform the same permutation on the CPU.
@@ -87,7 +101,7 @@ template <typename T> static void test() {
 
   std::vector<T> idata(dim[0] * dim[1] * dim[2] * dim[3]);
   for (int i = 0; i < idata.size(); i++)
-    idata[i] = i;
+    idata[i] = T(i);
   std::vector<T> odata(idata.size());
 
   gputtHandle plan;
@@ -156,6 +170,7 @@ int main(int argc, char *argv[]) {
   test<uint16_t>();
   test<  int8_t>();
   test< uint8_t>();
-
+  test<   char4>();
+  test<  uchar4>();
   return 0;
 }
