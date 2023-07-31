@@ -137,12 +137,17 @@ template <typename T> static void test() {
 
     gputtTransposeMethod method;
     GPUTT_ERR_CHECK(gputtPlanMethod(plan, &method));
-    std::cout << "Testing method " << method << std::endl;
+    std::cout << "Testing method " << method;
 
     // Execute plan
+    auto start = std::chrono::high_resolution_clock::now();
     GPUTT_ERR_CHECK(gputtExecute(plan, idataGPU, odataGPU));
 
     GPU_ERR_CHECK(gpuDeviceSynchronize());
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::cout << " time: " << std::chrono::duration_cast<std::chrono::duration<double>>(
+      end - start).count() << " sec" << std::endl;
 
     GPU_ERR_CHECK(gpuMemcpy(odata.data(), odataGPU,
                             odata.size() * sizeof(odata[0]),
