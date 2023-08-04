@@ -131,6 +131,36 @@ template<> inline gputtDataType gputtGetDataType< uint8_t>() { return gputtDataT
 template<> inline gputtDataType gputtGetDataType<   char4>() { return gputtDataTypeInt8x4; }
 template<> inline gputtDataType gputtGetDataType<  uchar4>() { return gputtDataTypeUInt8x4; }
 
+inline const char* gputtGetDataTypeString(gputtDataType dtype) {
+  switch(dtype) {
+  case gputtDataTypeFloat64 : return "gputtDataTypeFloat64";
+  case gputtDataTypeFloat32 : return "gputtDataTypeFloat32";
+  case gputtDataTypeFloat16 : return "gputtDataTypeFloat16";
+  case gputtDataTypeInt64   : return "gputtDataTypeInt64";
+  case gputtDataTypeUInt64  : return "gputtDataTypeUInt64";
+  case gputtDataTypeInt32   : return "gputtDataTypeInt32";
+  case gputtDataTypeUInt32  : return "gputtDataTypeUInt32";
+  case gputtDataTypeInt16   : return "gputtDataTypeInt16";
+  case gputtDataTypeUInt16  : return "gputtDataTypeUInt16";
+  case gputtDataTypeInt8    : return "gputtDataTypeInt8";
+  case gputtDataTypeUInt8   : return "gputtDataTypeUInt8";
+  case gputtDataTypeInt8x4  : return "gputtDataTypeInt8x4";
+  case gputtDataTypeUInt8x4 : return "gputtDataTypeUInt8x4";
+  default :                   return "gputtDataTypeUnknown";
+  }
+}
+
+inline const char* gputtGetTransposeMethodString(gputtTransposeMethod method) {
+  switch(method) {
+  case gputtTransposeMethodTrivial     : return "gputtTransposeMethodTrivial";
+  case gputtTransposeMethodPacked      : return "gputtTransposeMethodPacked";
+  case gputtTransposeMethodPackedSplit : return "gputtTransposeMethodPackedSplit";
+  case gputtTransposeMethodTiled       : return "gputtTransposeMethodTiled";
+  case gputtTransposeMethodTiledCopy   : return "gputtTransposeMethodTiledCopy";
+  default                              : return "gputtTransposeMethodUnknown";
+  }
+}
+
 // Tensor conversion constants
 struct TensorConv {
   int c;

@@ -92,16 +92,22 @@ static void check(D &dim, T &idata, T &odata) {
 }
 
 template <typename T> static void test() {
-  std::cout << "Testing for type size = " << sizeof(T) << std::endl;
+  std::cout << "Testing type " << gputtGetDataTypeString(gputtGetDataType<T>()) <<
+    " of size " << sizeof(T) << std::endl;
   
   // Four dimensional tensor
+//#define LARGE_SIZE
+#ifdef LARGE_SIZE
+  int dim[4] = { 101, 103, 107, 109 };
+#else
   // Transpose (31, 549, 2, 3) -> (3, 31, 2, 549)
-  int dim[4] = {31, 549, 2, 3};
-  int permutation[4] = {3, 0, 2, 1};
+  int dim[4] = { 31, 549, 2, 3 };
+#endif
+  int permutation[4] = { 3, 0, 2, 1 };
 
   std::vector<T> idata(dim[0] * dim[1] * dim[2] * dim[3]);
   for (int i = 0; i < idata.size(); i++)
-    idata[i] = T(i);
+    idata[i] = T(i % 2);
   std::vector<T> odata(idata.size());
 
   gputtHandle plan;
@@ -137,7 +143,7 @@ template <typename T> static void test() {
 
     gputtTransposeMethod method;
     GPUTT_ERR_CHECK(gputtPlanMethod(plan, &method));
-    std::cout << "Testing method " << method;
+    std::cout << "Testing method " << gputtGetTransposeMethodString(method);
 
     // Execute plan
     auto start = std::chrono::high_resolution_clock::now();
@@ -146,7 +152,7 @@ template <typename T> static void test() {
     GPU_ERR_CHECK(gpuDeviceSynchronize());
     auto end = std::chrono::high_resolution_clock::now();
 
-    std::cout << " time: " << std::chrono::duration_cast<std::chrono::duration<double>>(
+    std::cout << ": time = " << std::chrono::duration_cast<std::chrono::duration<double>>(
       end - start).count() << " sec" << std::endl;
 
     GPU_ERR_CHECK(gpuMemcpy(odata.data(), odataGPU,
