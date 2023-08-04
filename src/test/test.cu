@@ -31,6 +31,7 @@ SOFTWARE.
 #include <cmath>
 #include <cstring> // strcmp
 #include <ctime>   // std::time
+#include <iostream>
 #include <vector>
 
 //
@@ -509,22 +510,41 @@ bool test_tensor(std::vector<int> &dim, std::vector<int> &permutation) {
     timer = timerDouble;
   }
 
-  gputtHandle plan;
-  gputtCheck(
-      gputtPlan(&plan, rank, dim.data(), permutation.data(), gputtGetDataType<T>(), 0));
-  set_device_array<T>((T *)dataOut, -1, vol);
-  gpuCheck(gpuDeviceSynchronize());
+  // TODO This has to be tested for all transpose methods, just as in examples.
+  std::vector<gputtHandle> plans;
 
-  if (vol > 1000000)
-    timer->start(dim, permutation);
-  gputtCheck(gputtExecute(plan, dataIn, dataOut));
-  if (vol > 1000000)
-    timer->stop();
+  // Option 1: Create plan on NULL stream and choose the method manually.
+  for (int i = 0; i < NumTransposeMethods; i++) {
+    auto method = static_cast<gputtTransposeMethod>(i);
 
-  gputtCheck(gputtDestroy(plan));
+    // Only use the methods that are supported for the given parameters.
+    gputtHandle plan;
+    if (GPUTT_SUCCESS ==
+        gputtPlan(&plan, rank, dim.data(), permutation.data(), gputtGetDataType<T>(), 0, method))
+      plans.push_back(plan);
+  }
 
-  return tester->checkTranspose<T>(rank, dim.data(), permutation.data(),
-                                   (T *)dataOut);
+  for (auto plan : plans) {
+    gputtTransposeMethod method;
+    gputtCheck(gputtPlanMethod(plan, &method));
+    std::cout << "Testing method " << gputtGetTransposeMethodString(method) << std::endl;
+
+    set_device_array<T>((T *)dataOut, -1, vol);
+    gpuCheck(gpuDeviceSynchronize());
+
+    if (vol > 1000000)
+      timer->start(dim, permutation);
+    gputtCheck(gputtExecute(plan, dataIn, dataOut));
+    if (vol > 1000000)
+      timer->stop();
+
+    gputtCheck(gputtDestroy(plan));
+
+    if (!tester->checkTranspose<T>(rank, dim.data(), permutation.data(), (T *)dataOut))
+      return false;
+  }
+
+  return true;
 }
 
 void printVec(std::vector<int> &vec) {
