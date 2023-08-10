@@ -35,6 +35,8 @@ SOFTWARE.
 #define GPUTT_API
 #endif // _WIN32
 
+#include <stdint.h>
+
 // Handle type that is used to store and access gputt plans
 typedef struct gputtHandle_t* gputtHandle;
 

@@ -53,6 +53,8 @@ SOFTWARE.
     }                                                                          \
   } while (0)
 
+using namespace gputt::internal;
+
 char *dataIn = NULL;
 char *dataOut = NULL;
 size_t dataSize = 0;
@@ -500,8 +502,6 @@ template <typename T> bool bench5(int numElemAvg, int ratio) {
   std::normal_distribution<double> numElem_dist((double)numElemAvg,
                                                 (double)numElemAvg * 0.2);
 
-  const int minDim = 2;
-  const int maxDim = 16;
   for (int rank = 2; rank <= 7; rank++) {
 
     for (int iter = 0; iter < 500; iter++) {

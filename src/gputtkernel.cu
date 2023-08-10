@@ -38,6 +38,10 @@ SOFTWARE.
 
 #define clz(x) __builtin_clz(x)
 
+using __half_t = gputt::internal::__half;
+using char4_t = gputt::internal::char4;
+using uchar4_t = gputt::internal::uchar4;
+
 static int32_t ilog2(uint32_t x)
 {
     return sizeof(uint32_t) * CHAR_BIT - clz(x) - 1;
@@ -638,7 +642,7 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
     {                                                                     \
     case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;            \
     case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;            \
-    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;            \
+    case gputtDataTypeFloat16 : CALL0(__half_t, ICASE); break;            \
     case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;            \
     case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;            \
     case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;            \
@@ -647,8 +651,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;            \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;            \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;            \
-    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;            \
-    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;            \
+    case gputtDataTypeInt8x4  : CALL0( char4_t, ICASE); break;            \
+    case gputtDataTypeUInt8x4 : CALL0(uchar4_t, ICASE); break;            \
     }                                                                     \
     break
 
@@ -671,7 +675,7 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
     {                                                                     \
     case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;            \
     case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;            \
-    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;            \
+    case gputtDataTypeFloat16 : CALL0(__half_t, ICASE); break;            \
     case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;            \
     case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;            \
     case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;            \
@@ -680,8 +684,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;            \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;            \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;            \
-    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;            \
-    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;            \
+    case gputtDataTypeInt8x4  : CALL0( char4_t, ICASE); break;            \
+    case gputtDataTypeUInt8x4 : CALL0(uchar4_t, ICASE); break;            \
     }                                                                     \
     break
 
@@ -731,7 +735,7 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
   {                                                                       \
   case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;              \
   case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;              \
-  case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;              \
+  case gputtDataTypeFloat16 : CALL0(__half_t, ICASE); break;              \
   case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;              \
   case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;              \
   case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;              \
@@ -740,8 +744,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
   case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;              \
   case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;              \
   case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;              \
-  case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;              \
-  case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;              \
+  case gputtDataTypeInt8x4  : CALL0( char4_t, ICASE); break;              \
+  case gputtDataTypeUInt8x4 : CALL0(uchar4_t, ICASE); break;              \
   }                                                                       \
   break
 
@@ -761,7 +765,7 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
   {                                                                       \
   case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;              \
   case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;              \
-  case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;              \
+  case gputtDataTypeFloat16 : CALL0(__half_t, ICASE); break;              \
   case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;              \
   case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;              \
   case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;              \
@@ -770,8 +774,8 @@ int getNumActiveBlock(const int method, const gputtDataType dtype,
   case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;              \
   case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;              \
   case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;              \
-  case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;              \
-  case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;              \
+  case gputtDataTypeInt8x4  : CALL0( char4_t, ICASE); break;              \
+  case gputtDataTypeUInt8x4 : CALL0(uchar4_t, ICASE); break;              \
   }                                                                       \
   break
 
@@ -1004,18 +1008,6 @@ int gputtKernelLaunchConfiguration(const gputtDataType dtype, const TensorSplit 
 template<typename T>
 T get_value(const void* val, T default_val) { return val ? *reinterpret_cast<const T*>(val) : default_val; }
 
-__host__
-inline bool operator!=(const __half& x, const __half& y)
-{
-  return memcmp(&x, &y, sizeof(__half));
-}
-
-__host__
-inline bool operator==(const __half& x, const __half& y)
-{
-  return !(x != y);
-}
-
 bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
                  const void *alphaPtr, const void *betaPtr) {
 
@@ -1044,7 +1036,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   {                                                                            \
   case gputtDataTypeFloat64 : CALL0(  double); break;                          \
   case gputtDataTypeFloat32 : CALL0(   float); break;                          \
-  case gputtDataTypeFloat16 : CALL0(  __half); break;                          \
+  case gputtDataTypeFloat16 : CALL0(__half_t); break;                          \
   case gputtDataTypeInt64   : CALL0( int64_t); break;                          \
   case gputtDataTypeUInt64  : CALL0(uint64_t); break;                          \
   case gputtDataTypeInt32   : CALL0( int32_t); break;                          \
@@ -1053,14 +1045,18 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
   case gputtDataTypeUInt16  : CALL0(uint16_t); break;                          \
   case gputtDataTypeInt8    : CALL0(  int8_t); break;                          \
   case gputtDataTypeUInt8   : CALL0( uint8_t); break;                          \
-  case gputtDataTypeInt8x4  : CALL0(   char4); break;                          \
-  case gputtDataTypeUInt8x4 : CALL0(  uchar4); break;                          \
+  case gputtDataTypeInt8x4  : CALL0( char4_t); break;                          \
+  case gputtDataTypeUInt8x4 : CALL0(uchar4_t); break;                          \
   }                                                                            \
   break      
 
   case gputtTransposeMethodTrivial :
     CALL();
     break;
+
+#undef CALL
+#undef CALL0
+#undef CALL1
 
 #define CALL1(TYPE, NREG, betaIsZero) do {                                        \
   transposePacked<TYPE, NREG, betaIsZero>                                         \
@@ -1086,7 +1082,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     {                                                                          \
     case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;                 \
     case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;                 \
-    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;                 \
+    case gputtDataTypeFloat16 : CALL0(__half_t, ICASE); break;                 \
     case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;                 \
     case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;                 \
     case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;                 \
@@ -1095,8 +1091,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;                 \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;                 \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;                 \
-    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;                 \
-    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;                 \
+    case gputtDataTypeInt8x4  : CALL0( char4_t, ICASE); break;                 \
+    case gputtDataTypeUInt8x4 : CALL0(uchar4_t, ICASE); break;                 \
     }                                                                          \
     break
 
@@ -1138,7 +1134,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     {                                                                          \
     case gputtDataTypeFloat64 : CALL0(  double, ICASE); break;                 \
     case gputtDataTypeFloat32 : CALL0(   float, ICASE); break;                 \
-    case gputtDataTypeFloat16 : CALL0(  __half, ICASE); break;                 \
+    case gputtDataTypeFloat16 : CALL0(__half_t, ICASE); break;                 \
     case gputtDataTypeInt64   : CALL0( int64_t, ICASE); break;                 \
     case gputtDataTypeUInt64  : CALL0(uint64_t, ICASE); break;                 \
     case gputtDataTypeInt32   : CALL0( int32_t, ICASE); break;                 \
@@ -1147,8 +1143,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t, ICASE); break;                 \
     case gputtDataTypeInt8    : CALL0(  int8_t, ICASE); break;                 \
     case gputtDataTypeUInt8   : CALL0( uint8_t, ICASE); break;                 \
-    case gputtDataTypeInt8x4  : CALL0(   char4, ICASE); break;                 \
-    case gputtDataTypeUInt8x4 : CALL0(  uchar4, ICASE); break;                 \
+    case gputtDataTypeInt8x4  : CALL0( char4_t, ICASE); break;                 \
+    case gputtDataTypeUInt8x4 : CALL0(uchar4_t, ICASE); break;                 \
     }                                                                          \
     break
 
@@ -1189,7 +1185,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     {                                                                          \
     case gputtDataTypeFloat64 : CALL0(  double); break;                        \
     case gputtDataTypeFloat32 : CALL0(   float); break;                        \
-    case gputtDataTypeFloat16 : CALL0(  __half); break;                        \
+    case gputtDataTypeFloat16 : CALL0(__half_t); break;                        \
     case gputtDataTypeInt64   : CALL0( int64_t); break;                        \
     case gputtDataTypeUInt64  : CALL0(uint64_t); break;                        \
     case gputtDataTypeInt32   : CALL0( int32_t); break;                        \
@@ -1198,8 +1194,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t); break;                        \
     case gputtDataTypeInt8    : CALL0(  int8_t); break;                        \
     case gputtDataTypeUInt8   : CALL0( uint8_t); break;                        \
-    case gputtDataTypeInt8x4  : CALL0(   char4); break;                        \
-    case gputtDataTypeUInt8x4 : CALL0(  uchar4); break;                        \
+    case gputtDataTypeInt8x4  : CALL0( char4_t); break;                        \
+    case gputtDataTypeUInt8x4 : CALL0(uchar4_t); break;                        \
     }                                                                          \
     break
 
@@ -1234,7 +1230,7 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     {                                                                          \
     case gputtDataTypeFloat64 : CALL0(  double); break;                        \
     case gputtDataTypeFloat32 : CALL0(   float); break;                        \
-    case gputtDataTypeFloat16 : CALL0(  __half); break;                        \
+    case gputtDataTypeFloat16 : CALL0(__half_t); break;                        \
     case gputtDataTypeInt64   : CALL0( int64_t); break;                        \
     case gputtDataTypeUInt64  : CALL0(uint64_t); break;                        \
     case gputtDataTypeInt32   : CALL0( int32_t); break;                        \
@@ -1243,8 +1239,8 @@ bool gputtKernel(gputtPlan_t &plan, const void *dataIn, void *dataOut,
     case gputtDataTypeUInt16  : CALL0(uint16_t); break;                        \
     case gputtDataTypeInt8    : CALL0(  int8_t); break;                        \
     case gputtDataTypeUInt8   : CALL0( uint8_t); break;                        \
-    case gputtDataTypeInt8x4  : CALL0(   char4); break;                        \
-    case gputtDataTypeUInt8x4 : CALL0(  uchar4); break;                        \
+    case gputtDataTypeInt8x4  : CALL0( char4_t); break;                        \
+    case gputtDataTypeUInt8x4 : CALL0(uchar4_t); break;                        \
     }                                                                          \
     break
 

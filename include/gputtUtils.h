@@ -27,6 +27,9 @@ SOFTWARE.
 
 #include "gputt_internal.h"
 
+#include <cstdio>
+#include <cstdlib>
+
 //
 // Error checking wrapper for CUDA
 //

@@ -47,6 +47,8 @@ SOFTWARE.
     }                                                                          \
   } while (0)
 
+using namespace gputt::internal;
+
 gputtTimer *timerFloat;
 gputtTimer *timerDouble;
 

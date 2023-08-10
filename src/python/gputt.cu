@@ -1,4 +1,5 @@
 #include "gputt.h"
+#include "gputt_internal.h"
 
 #include <memory>
 #include <mutex>

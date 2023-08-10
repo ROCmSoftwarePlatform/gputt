@@ -69,7 +69,7 @@ SOFTWARE.
 #define gpuStreamCreate hipStreamCreate
 #define gpuStreamDestroy hipStreamDestroy
 #define gpuSuccess hipSuccess
-#else // __HIP_PLATFORM_HCC__
+#else // __HIPCC__
 #define gpuDeviceGetSharedMemConfig cudaDeviceGetSharedMemConfig
 #define gpuDeviceProp_t cudaDeviceProp
 #define gpuDeviceReset cudaDeviceReset
@@ -116,6 +116,163 @@ SOFTWARE.
 #include <cuda_fp16.h>
 #endif
 
+#include <iostream>
+
+// Tensor conversion constants
+struct TensorConv {
+  int c;
+  int d;
+  int ct;
+};
+
+// Tensor conversion constants input & output pair
+// TODO Use nested struct TensorConv instead
+struct TensorConvInOut {
+  int c_in;
+  int d_in;
+  int ct_in;
+
+  int c_out;
+  int d_out;
+  int ct_out;
+};
+
+namespace gputt {
+
+namespace internal {
+
+// CUDA's __half has eq/neq operators for __device__ only.
+struct __half : public ::__half
+{
+  __host__ __device__
+  __half() : ::__half() { }
+
+  __host__ __device__
+  __half(int v) : ::__half(v) { }
+
+  __host__ __device__
+  __half(const ::__half& v) : ::__half(v) { }
+
+  __host__ __device__
+  inline bool operator!=(const __half& y) const
+  {
+#if defined(__CUDA_ARCH__) || defined(__HIP_ARCH__)
+    return static_cast<const ::__half>(*this) != static_cast<const ::__half>(y);
+#else
+    // TODO Does not handle denormals correctly.
+    return memcmp(this, &y, sizeof(__half));
+#endif
+  }
+
+  __host__ __device__
+  inline bool operator==(const __half& y) const
+  {
+    return !(*this != y);
+  }
+
+  __device__
+  inline __half operator*(const __half& y) const
+  {
+    return static_cast<const ::__half>(*this) * static_cast<const ::__half>(y);
+  }
+
+  __device__
+  inline __half operator+(const __half& y) const
+  {
+    return static_cast<const ::__half>(*this) + static_cast<const ::__half>(y);
+  }
+};
+
+// CUDA's char4 does not have constructor to initialize
+// all items with the same value.
+struct char4 : public ::char4
+{
+  __host__ __device__
+  char4() : ::char4() { }
+
+  __host__ __device__
+  char4(int v) : ::char4({ static_cast<char>(v), static_cast<char>(v), static_cast<char>(v), static_cast<char>(v) }) { }
+};
+
+// CUDA's uchar4 does not have constructor to initialize
+// all items with the same value.
+struct uchar4 : public ::uchar4
+{
+  __host__ __device__
+  uchar4() : ::uchar4() { }
+
+  __host__ __device__
+  uchar4(int v) : ::uchar4({ static_cast<unsigned char>(v), static_cast<unsigned char>(v), static_cast<unsigned char>(v), static_cast<unsigned char>(v) }) { }
+};
+
+__host__
+inline bool operator!=(const char4& x, const char4& y)
+{
+  return memcmp(&x, &y, sizeof(char4));
+}
+
+__host__
+inline bool operator!=(const uchar4& x, const uchar4& y)
+{
+  return memcmp(&x, &y, sizeof(uchar4));
+}
+
+__host__
+inline bool operator==(const char4& x, const char4& y)
+{
+  return !(x != y);
+}
+
+__host__
+inline bool operator==(const uchar4& x, const uchar4& y)
+{
+  return !(x != y);
+}
+
+__host__ __device__
+inline char4 operator*(const char4& x, const char4& y)
+{
+  char4 v {};
+  v.x = x.x * y.x;
+  v.y = x.y * y.y;
+  v.z = x.z * y.z;
+  v.w = x.w * y.w;
+  return v;
+}
+
+__host__ __device__
+inline uchar4 operator*(const uchar4& x, const uchar4& y)
+{
+  uchar4 v {};
+  v.x = x.x * y.x;
+  v.y = x.y * y.y;
+  v.z = x.z * y.z;
+  v.w = x.w * y.w;
+  return v;
+}
+
+__host__ __device__
+inline char4 operator+(const char4& x, const char4& y)
+{
+  char4 v {};
+  v.x = x.x + y.x;
+  v.y = x.y + y.y;
+  v.z = x.z + y.z;
+  v.w = x.w + y.w;
+  return v;
+}
+
+__host__ __device__
+inline uchar4 operator+(const uchar4& x, const uchar4& y)
+{
+  uchar4 v {};
+  v.x = x.x + y.x;
+  v.y = x.y + y.y;
+  v.z = x.z + y.z;
+  v.w = x.w + y.w;
+  return v;
+}
+
 template<typename T> gputtDataType gputtGetDataType() { return gputtDataTypeUnknown; }
 template<> inline gputtDataType gputtGetDataType<  double>() { return gputtDataTypeFloat64; }
 template<> inline gputtDataType gputtGetDataType<   float>() { return gputtDataTypeFloat32; }
@@ -130,6 +287,30 @@ template<> inline gputtDataType gputtGetDataType<  int8_t>() { return gputtDataT
 template<> inline gputtDataType gputtGetDataType< uint8_t>() { return gputtDataTypeUInt8; }
 template<> inline gputtDataType gputtGetDataType<   char4>() { return gputtDataTypeInt8x4; }
 template<> inline gputtDataType gputtGetDataType<  uchar4>() { return gputtDataTypeUInt8x4; }
+
+} // namespace internal
+
+} // namespace gputt
+
+inline std::ostream& operator<<(std::ostream& os, const __half& val)
+{
+  os << static_cast<double>(val);
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const char4& val)
+{
+  os << static_cast<int>(val.x) << " " << static_cast<int>(val.y) << " " <<
+    static_cast<int>(val.z) << " " << static_cast<int>(val.w);
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const uchar4& val)
+{
+  os << static_cast<int>(val.x) << " " << static_cast<int>(val.y) << " " <<
+    static_cast<int>(val.z) << " " << static_cast<int>(val.w);
+  return os;
+}
 
 inline const char* gputtGetDataTypeString(gputtDataType dtype) {
   switch(dtype) {
@@ -160,24 +341,5 @@ inline const char* gputtGetTransposeMethodString(gputtTransposeMethod method) {
   default                              : return "gputtTransposeMethodUnknown";
   }
 }
-
-// Tensor conversion constants
-struct TensorConv {
-  int c;
-  int d;
-  int ct;
-};
-
-// Tensor conversion constants input & output pair
-// TODO Use nested struct TensorConv instead
-struct TensorConvInOut {
-  int c_in;
-  int d_in;
-  int ct_in;
-
-  int c_out;
-  int d_out;
-  int ct_out;
-};
 
 #endif // GPUTT_TYPES_H

@@ -1,8 +1,14 @@
 #include <gputt.h>
 #include <gputt_internal.h>
 
-#include <iostream>
+#include <chrono>
 #include <vector>
+
+using namespace gputt::internal;
+
+using __half_t = gputt::internal::__half;
+using char4_t = gputt::internal::char4;
+using uchar4_t = gputt::internal::uchar4;
 
 //
 // Error checking wrapper for gpuTT and vendor API.
@@ -26,32 +32,6 @@
       exit(-1);                                                                \
     }                                                                          \
   } while (0)
-
-__host__
-inline bool operator!=(const __half& x, const __half& y)
-{
-  return memcmp(&x, &y, sizeof(__half));
-}
-
-inline std::ostream& operator<<(std::ostream& os, __half& val)
-{
-  os << static_cast<double>(val);
-  return os;
-}
-
-inline std::ostream& operator<<(std::ostream& os, char4& val)
-{
-  os << static_cast<int>(val.x) << " " << static_cast<int>(val.y) << " " <<
-    static_cast<int>(val.z) << " " << static_cast<int>(val.w);
-  return os;
-}
-
-inline std::ostream& operator<<(std::ostream& os, uchar4& val)
-{
-  os << static_cast<int>(val.x) << " " << static_cast<int>(val.y) << " " <<
-    static_cast<int>(val.z) << " " << static_cast<int>(val.w);
-  return os;
-}
 
 template <typename D, typename T>
 static void check(D &dim, T &idata, T &odata) {
@@ -96,7 +76,7 @@ template <typename T> static void test() {
     " of size " << sizeof(T) << std::endl;
   
   // Four dimensional tensor
-//#define LARGE_SIZE
+#define LARGE_SIZE
 #ifdef LARGE_SIZE
   int dim[4] = { 101, 103, 107, 109 };
 #else
@@ -107,7 +87,7 @@ template <typename T> static void test() {
 
   std::vector<T> idata(dim[0] * dim[1] * dim[2] * dim[3]);
   for (int i = 0; i < idata.size(); i++)
-    idata[i] = T(i % 2);
+    idata[i] = T(i);
   std::vector<T> odata(idata.size());
 
   gputtHandle plan;
@@ -172,7 +152,7 @@ template <typename T> static void test() {
 int main(int argc, char *argv[]) {
   test<  double>();
   test<   float>();
-  test<  __half>();
+  test<__half_t>();
   test< int64_t>();
   test<uint64_t>();
   test< int32_t>();
@@ -181,7 +161,7 @@ int main(int argc, char *argv[]) {
   test<uint16_t>();
   test<  int8_t>();
   test< uint8_t>();
-  test<   char4>();
-  test<  uchar4>();
+  test< char4_t>();
+  test<uchar4_t>();
   return 0;
 }
